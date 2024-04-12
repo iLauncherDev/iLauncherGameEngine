@@ -1,0 +1,1 @@
+var game = new iLGE_2D(document.getElementById("GameScreen"), true);
