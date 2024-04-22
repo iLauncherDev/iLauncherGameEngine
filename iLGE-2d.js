@@ -896,13 +896,25 @@ class iLGE_2D_Engine {
         ).data;
         let effect_frame = new ImageData(dwidth, dheight);
         let is_different = newframe !== oldframe && oldframe ? true : false;
+        let precalc_pos = [];
+        let _x = 0, _y = 0;
+        for (let y = 0; y < dheight; y++) {
+            if (_y > effect_size)
+                _y = 0;
+            precalc_pos[y] = [];
+            for (let x = 0; x < dwidth; x++) {
+                if (_x > effect_size)
+                    _x = 0;
+                precalc_pos[y][x] = (_y * effect_size + _x) * 4;
+                _x++;
+            }
+            _y++;
+        }
         for (let y = 0; y < dheight; y++) {
             let effect_frame_index = y * effect_frame.width * 4;
-            let frame_index = (y + dy) * newframe.width * 4 + (dx * 4);
+            let frame_index = ((y + dy) * newframe.width + dx) * 4;
             for (let x = 0; x < dwidth; x++) {
-                let effect_spritesheet_data_index = (
-                    ((y + dy) % effect_size) * effect_size +
-                    ((x + dx) % effect_size)) * 4;
+                let effect_spritesheet_data_index = precalc_pos[y][x];
                 if (effect_spritesheet_data[effect_spritesheet_data_index + 0] +
                     effect_spritesheet_data[effect_spritesheet_data_index + 1] +
                     effect_spritesheet_data[effect_spritesheet_data_index + 2] > 0) {
@@ -1029,8 +1041,8 @@ class iLGE_2D_Engine {
                                 tmp_object2.prepareForCollision();
                                 if (this.#collision_detection(tmp_object1, tmp_object2)) {
                                     if (!element1.blocker && element2.blocker) {
-                                        object1.x = object1.old_x + Math.sign(object1.x - object1.old_x);
-                                        object1.y = object1.old_y + Math.sign(object1.y - object1.old_y);
+                                        object1.x = object1.old_x;
+                                        object1.y = object1.old_y;
                                         let overlapX = this.#getOverlapX(
                                             tmp_object1.vertices,
                                             tmp_object2.vertices
