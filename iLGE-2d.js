@@ -15,6 +15,68 @@ const iLGE_2D_Control_MouseX_Positive = "MouseX_Positive";
 const iLGE_2D_Control_MouseY_Positive = "MouseY_Positive";
 const iLGE_2D_Control_MouseX_Negative = "MouseX_Negative";
 const iLGE_2D_Control_MouseY_Negative = "MouseY_Negative";
+const iLGE_2D_Source_Type_Image = "Image_Source";
+const iLGE_2D_Source_Type_Audio = "Audio_Source";
+
+class iLGE_2D_Source {
+    source = 0;
+    source_data = 0;
+    #src = null;
+    #type = null;
+
+    getSrc() {
+        return this.#src;
+    }
+
+    compareSrc(src) {
+        return this.#src === src ? true : false;
+    }
+
+    compareSourceType(type) {
+        return this.#type === type ? true : false;
+    }
+
+    stopAudio() {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+            return;
+        this.source.pause();
+        this.currentTime = 0;
+    }
+
+    pauseAudio() {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+            return;
+        this.source.pause();
+    }
+
+    resumeAudio() {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+            return;
+        this.source.play();
+    }
+
+    playAudio() {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+            return;
+        this.source.currentTime = 0;
+        this.source.play();
+    }
+
+    setAudioTime(time = 0) {
+        this.currentTime = 0;
+    }
+
+    cloneIt() {
+        let source = new Audio(this.source.src);
+        return new iLGE_2D_Source(source, this.#src, this.#type);
+    }
+
+    constructor(source, src, type) {
+        this.source = source;
+        this.#src = src;
+        this.#type = type;
+    }
+}
 
 class iLGE_2D_Vector2 {
     x = 0; y = 0;
@@ -66,11 +128,6 @@ class iLGE_2D_Vector2 {
     }
 }
 
-let rotation = (Math.PI / 180) * 30;
-let rotated_vector = new iLGE_2D_Vector2(Math.cos(rotation), Math.sin(rotation));
-let movement_vector = new iLGE_2D_Vector2(8, 8);
-movement_vector.transform(rotated_vector);
-
 class iLGE_2D_Object_Font {
     image = 0;
     id = 0;
@@ -78,7 +135,11 @@ class iLGE_2D_Object_Font {
     width = 0;
     height = 0;
     map = {};
-    constructor(image_object, id, fontwidth, fontheight, fontmap) {
+    constructor(source_object, id, fontwidth, fontheight, fontmap) {
+        let image_object = null;
+        if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
+            return;
+        image_object = source_object.source;
         this.canvas = document.createElement("canvas");
         this.canvas.id = id;
         this.canvas.width = fontwidth;
@@ -98,7 +159,11 @@ class iLGE_2D_Object_Font {
 
 class iLGE_2D_Object_Element_Sprite {
     type = iLGE_2D_Object_Element_Type_Sprite;
-    constructor(image_object, id, visible, src_x, src_y, src_width, src_height) {
+    constructor(source_object, id, visible, src_x, src_y, src_width, src_height) {
+        let image_object = null;
+        if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
+            return;
+        image_object = source_object.source;
         this.id = id;
         this.image = image_object;
         this.visible = visible;
@@ -162,7 +227,11 @@ class iLGE_2D_Object_Element_Sprite_Transition_Effect {
     src_index = 0;
     oldframe = 0;
 
-    constructor(image_object = new Image(), visible = false, size = 0) {
+    constructor(source_object, visible, size) {
+        let image_object = null;
+        if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
+            return;
+        image_object = source_object.source;
         this.image = image_object;
         this.visible = visible;
         this.size = size;
@@ -367,13 +436,9 @@ class iLGE_2D_Engine {
 
     #control_map = {};
     #control_map_default = {};
-    #images = [];
-    #loaded_images = 0;
-    #total_images = 0;
-
-    #audios = [];
-    #loaded_audios = 0;
-    #total_audios = 0;
+    #source = [];
+    #loaded_sources = 0;
+    #total_sources = 0;
 
     deltaTime = 1;
     fps = 0;
@@ -1079,14 +1144,14 @@ class iLGE_2D_Engine {
     start() {
         if (!this.pointerLock)
             document.exitPointerLock();
-        if (this.#loaded_images < this.#total_images) {
+        if (this.#loaded_sources < this.#total_sources) {
             window.requestAnimationFrame(this.start);
             return;
         }
+        this.#time_old = (new Date()).getTime();
         this.#gamepad_handler(null, this, null);
         let objects_with_collider_element = [];
         let blocker_objects_with_collider_element = [];
-        this.#time_old = (new Date()).getTime();
         for (let object of this.#objects) {
             object.old_x = object.x;
             object.old_y = object.y;
@@ -1123,7 +1188,7 @@ class iLGE_2D_Engine {
         this.#time_new = (new Date()).getTime();
         this.#time_diff = this.#time_new - this.#time_old;
         this.deltaTime = this.#time_diff / (1000 / 60);
-        this.fps = Math.round(1000 / this.#time_diff);
+        this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
         window.requestAnimationFrame(this.start);
     }
 
@@ -1133,31 +1198,26 @@ class iLGE_2D_Engine {
         this.#selected_camera = camera;
     }
 
-    getImageObject(src) {
-        for (let i = 0; i < this.#images.length; i++) {
-            if (this.#images[i].src.includes(src)) {
-                return this.#images[i];
-            }
-        }
-        return null;
-    }
-
+    /**
+     * 
+     * @param {Event} event 
+     * @param {this} isThis 
+     */
     #resize_handler(event, isThis) {
         if (!isThis.auto_resize)
             return;
-        isThis.canvas.width = window.innerWidth * window.devicePixelRatio;
-        isThis.canvas.height = window.innerHeight * window.devicePixelRatio;
-        isThis.width = isThis.canvas.width;
-        isThis.height = isThis.canvas.height;
+        isThis.width = window.innerWidth * window.devicePixelRatio;
+        isThis.height = window.innerHeight * window.devicePixelRatio;
+        console.log(`width: ${isThis.width}, height: ${isThis.height};`);
+        isThis.canvas.width = isThis.width;
+        isThis.canvas.height = isThis.height;
         isThis.canvas_context.imageSmoothingEnabled = false;
-        console.log(`width: ${isThis.canvas.width};`);
-        console.log(`height: ${isThis.canvas.height};`);
     }
 
     /**
      * 
      * @param {MouseEvent} event 
-     * @param {Object} isThis 
+     * @param {this} isThis 
      * @param {String} type 
      */
     #mouse_handler(event, isThis, type) {
@@ -1176,7 +1236,7 @@ class iLGE_2D_Engine {
     /**
      * 
      * @param {KeyboardEvent} event 
-     * @param {Object} isThis 
+     * @param {this} isThis 
      * @param {Boolean} bool 
      */
     #keyboard_handler(event, isThis, bool) {
@@ -1252,17 +1312,90 @@ class iLGE_2D_Engine {
         return this.canvas_context.getImageData(0, 0, this.width, this.height);
     }
 
-    constructor(gameid, images, audios, html_div, width, height, auto_resize) {
+    /**
+     * 
+     * @param {String} src 
+     * @returns {iLGE_2D_Source}
+     */
+    getSourceObject(src) {
+        for (let i = 0; i < this.#source.length; i++) {
+            if (this.#source[i].compareSrc(src)) {
+                return this.#source[i];
+            }
+        }
+        return null;
+    }
+
+    #getSourceFormat(src) {
+        if (!src)
+            return null;
+        let start_at = 0,
+            end_at = src.length;
+        for (let i = src.length; i >= 0; i--) {
+            let char = src.charAt(i);
+            if (char === ".") {
+                start_at = i;
+                break;
+            }
+        }
+        return src.slice(start_at, end_at);
+    }
+
+    constructor(gameid, source_files, html_div, width, height, auto_resize) {
         let isThis = this;
         this.gameid = gameid;
-        this.#total_images = images.length;
-        for (let i = 0; i < images.length; i++) {
-            let image = new Image();
-            this.#images.push(image);
-            image.onload = function (event) {
-                isThis.#loaded_images++;
-            };
-            image.src = images[i];
+        isThis.#total_sources = source_files.length;
+        for (let i = 0; i < source_files.length; i++) {
+            let source_url = source_files[i];
+            let source_format = isThis.#getSourceFormat(source_url);
+            let source = null;
+            let xhr = new XMLHttpRequest();
+            let source_object;
+            xhr.open("GET", source_url);
+            xhr.responseType = "arraybuffer";
+            switch (source_format) {
+                case ".jpeg":
+                case ".jpg":
+                case ".png":
+                    source = new Image();
+                    source_object = new iLGE_2D_Source(source, source_url, iLGE_2D_Source_Type_Image);
+                    xhr.onload = function () {
+                        if (xhr.status !== 200) {
+                            return;
+                        }
+                        let imageData = xhr.response;
+                        source.onload = function () {
+                            isThis.#loaded_sources++;
+                        };
+                        source.src = URL.createObjectURL(
+                            new Blob([imageData, { type: "image/mpeg" }])
+                        );
+                        source_object.source_data = imageData;
+                    };
+                    xhr.send();
+                    this.#source.push(source_object);
+                    break;
+                case ".wav":
+                case ".mp3":
+                case ".ogg":
+                    source = new Audio();
+                    source_object = new iLGE_2D_Source(source, source_url, iLGE_2D_Source_Type_Audio);
+                    xhr.onload = function () {
+                        if (xhr.status !== 200) {
+                            return;
+                        }
+                        let audioData = xhr.response;
+                        source.src = URL.createObjectURL(
+                            new Blob([audioData, { type: "audio/mpeg" }])
+                        );
+                        isThis.#source[i].source_data = audioData;
+                        isThis.#loaded_sources++;
+                        source_object.source_data = audioData;
+                    };
+                    xhr.send();
+                    this.#source.push(source_object);
+                    break;
+            }
         }
         this.start = this.start.bind(isThis);
         this.canvas = document.createElement("canvas");

@@ -1,14 +1,15 @@
 let game = new iLGE_2D_Engine(
-    "Test", ["PDV437.png", "DitherSprites.png"], [],
-    document.getElementById("GameScreen"), 320, 200, true);
+    "Test", ["PDV437.png", "DitherSprites.png", "clang.ogg"],
+    document.getElementById("GameScreen"), 640, 480, true);
 
 let PDV437 = new iLGE_2D_Object_Font(
-    game.getImageObject("PDV437.png"), "PDV437", 9, 16,
+    game.getSourceObject("PDV437.png"), "PDV437", 9, 16,
     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[]"
 );
 
 game.addObject(PDV437);
 
+let clang_audio = game.getSourceObject("clang.ogg");
 let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, 0, 0);
 game.debug = false;
 game.occlusion_culling_test = false;
@@ -17,7 +18,7 @@ let transition_ended = false, transition_loop = false;
 
 let transition_effect = new iLGE_2D_Object("Transition_Effect");
 transition_effect.dither = new iLGE_2D_Object_Element_Sprite_Transition_Effect(
-    game.getImageObject("DitherSprites.png"), false, 2
+    game.getSourceObject("DitherSprites.png"), false, 2
 );
 transition_effect.addElement(transition_effect.dither);
 
@@ -156,8 +157,7 @@ player.update_function = function (engine) {
         transition_effect.dither.oldframe = engine.getFrameData();
         DitherTransition(engine);
     }
-    else
-    {
+    else {
         transition_effect.dither.visible = false;
         transition_effect.dither.src_index = 0;
     }
@@ -220,8 +220,10 @@ player.update_function = function (engine) {
     }
     if (engine.control_map_get("Interact", true)) {
         collided_wall = this.collider.collidedWithByClass("wall");
-        if (collided_wall)
+        if (collided_wall) {
             engine.removeObject(collided_wall.id);
+            clang_audio.cloneIt().playAudio();
+        }
     }
 }
 
