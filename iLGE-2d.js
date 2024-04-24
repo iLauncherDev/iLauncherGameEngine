@@ -7,6 +7,7 @@
 const iLGE_2D_Object_Element_Type_Sprite = "Sprite";
 const iLGE_2D_Object_Element_Type_Rectangle = "Rectangle";
 const iLGE_2D_Object_Element_Type_Collider = "Collider";
+const iLGE_2D_Object_Element_Type_Text = "Text";
 const iLGE_2D_Object_Element_Type_Sprite_Transition_Effect = "Sprite_Transition_Effect";
 const __iLGE_2D_Object_Font = "Font";
 const iLGE_2D_Object_Type_Camera = "Camera";
@@ -78,6 +79,36 @@ class iLGE_2D_Source {
     }
 }
 
+class iLGE_2D_Object_Font {
+    image = 0;
+    id = 0;
+    type = __iLGE_2D_Object_Font;
+    width = 0;
+    height = 0;
+    map = {};
+    constructor(source_object, id, fontwidth, fontheight, fontmap) {
+        let image_object = null;
+        if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
+            return;
+        image_object = source_object.source;
+        this.canvas = document.createElement("canvas");
+        this.canvas.style = "background-color: transparent;";
+        this.canvas.id = id;
+        this.canvas.width = fontwidth;
+        this.canvas.height = fontheight;
+        this.canvas_context = this.canvas.getContext("2d");
+        this.image = image_object;
+        this.id = id;
+        this.width = fontwidth;
+        this.height = fontheight;
+        this.map = [];
+        for (let i = 0; i < fontmap.length; i++) {
+            let char = fontmap.charAt(i);
+            this.map[char] = [this.width * i, 0];
+        }
+    }
+}
+
 class iLGE_2D_Vector2 {
     x = 0; y = 0;
 
@@ -128,37 +159,13 @@ class iLGE_2D_Vector2 {
     }
 }
 
-class iLGE_2D_Object_Font {
-    image = 0;
-    id = 0;
-    type = __iLGE_2D_Object_Font;
-    width = 0;
-    height = 0;
-    map = {};
-    constructor(source_object, id, fontwidth, fontheight, fontmap) {
-        let image_object = null;
-        if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
-            return;
-        image_object = source_object.source;
-        this.canvas = document.createElement("canvas");
-        this.canvas.id = id;
-        this.canvas.width = fontwidth;
-        this.canvas.height = fontheight;
-        this.canvas_context = this.canvas.getContext("2d");
-        this.image = image_object;
-        this.id = id;
-        this.width = fontwidth;
-        this.height = fontheight;
-        this.map = [];
-        for (let i = 0; i < fontmap.length; i++) {
-            let char = fontmap.charAt(i);
-            this.map[char] = [this.width * i, 0];
-        }
-    }
-}
-
 class iLGE_2D_Object_Element_Sprite {
     type = iLGE_2D_Object_Element_Type_Sprite;
+    visible = true;
+    src_x = 0;
+    src_y = 0;
+    src_width = 0;
+    src_height = 0;
     constructor(source_object, id, visible, src_x, src_y, src_width, src_height) {
         let image_object = null;
         if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
@@ -176,8 +183,28 @@ class iLGE_2D_Object_Element_Sprite {
 
 class iLGE_2D_Object_Element_Rectangle {
     type = iLGE_2D_Object_Element_Type_Rectangle;
+    color = "#000000";
+    visible = true;
     constructor(color, id, visible) {
         this.id = id;
+        this.color = color;
+        this.visible = visible;
+    }
+}
+
+class iLGE_2D_Object_Element_Text {
+    type = iLGE_2D_Object_Element_Type_Text;
+    font_id = 0;
+    id = 0;
+    string = 0;
+    px = 0;
+    color = "#000000";
+    visible = true;
+    constructor(font_id, id, string, px, color, visible) {
+        this.font_id = font_id;
+        this.id = id;
+        this.string = string;
+        this.px = px;
         this.color = color;
         this.visible = visible;
     }
@@ -186,6 +213,7 @@ class iLGE_2D_Object_Element_Rectangle {
 class iLGE_2D_Object_Element_Collider {
     type = iLGE_2D_Object_Element_Type_Collider;
     blocker = false;
+    noclip = false;
     collided_objects = [];
     x = 0;
     y = 0;
@@ -253,8 +281,6 @@ class iLGE_2D_Object {
     scale_output = 0;
     width = 0;
     height = 0;
-    scaled_width = 0;
-    scaled_height = 0;
     min_speed = 0;
     speed = 0;
     max_speed = 0;
@@ -754,41 +780,17 @@ class iLGE_2D_Engine {
         return null;
     }
 
-    #drawChar(char, canvas_context, font_object, x, y, px, color) {
-        if (typeof font_object !== "object")
-            return 0;
-        const font_scale = font_object.height / px;
-        const font_width = font_object.width / font_scale;
-        const font_height = font_object.height / font_scale;
-        if (font_object.canvas.width != font_width) {
-            font_object.canvas.width = font_width;
-            font_object.canvas.height = font_height;
-        }
-        font_object.canvas_context.imageSmoothingEnabled = false;
-        font_object.canvas_context.drawImage(
-            font_object.image,
-            font_object.map[char][0], font_object.map[char][1],
-            font_object.width, font_object.height,
-            0, 0,
-            font_width, font_height);
-        font_object.canvas_context.globalCompositeOperation = "source-in";
-        font_object.canvas_context.fillStyle = color;
-        font_object.canvas_context.fillRect(0, 0, font_width, font_height);
-        canvas_context.drawImage(
-            font_object.canvas,
-            0, 0, font_width, font_height,
-            x, y, font_width, font_height
-        );
-        return font_width;
-    }
-
-    #drawText(string, canvas_context, font_id, x, y, px, color) {
-        let font = this.#find_font(font_id);
-        if (!font)
+    #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color) {
+        if (!string || !canvas_context || !font_id)
             return;
-        const font_scale = font.height / px;
-        const font_width = font.width / font_scale;
-        const font_height = font.height / font_scale;
+        let font_object = this.#find_font(font_id);
+        if (!font_object)
+            return;
+        const font_scale = font_object.height / px;
+        const font_width = Math.round(font_object.width / font_scale);
+        const font_height = Math.round(font_object.height / font_scale);
+        if (y + px > max_height)
+            return;
         let font_x_pos = 0;
         let font_y_pos = 0;
         for (let i = 0; i < string.length; i++) {
@@ -802,15 +804,30 @@ class iLGE_2D_Engine {
                     font_x_pos += font_width;
                     continue;
             }
-            if (x + font_x_pos + font_width >= canvas_context.canvas.width) {
+            if (x + font_x_pos >= max_width) {
                 font_x_pos = 0;
                 font_y_pos += font_height;
             }
-            font_x_pos += this.#drawChar(
-                char, canvas_context,
-                font, x + font_x_pos, y + font_y_pos,
-                px, color
+            if (y + font_y_pos >= max_height)
+                break;
+            font_object.canvas.width = font_width;
+            font_object.canvas.height = font_height;
+            font_object.canvas_context.imageSmoothingEnabled = false;
+            font_object.canvas_context.drawImage(
+                font_object.image,
+                font_object.map[char][0], font_object.map[char][1],
+                font_object.width, font_object.height,
+                0, 0,
+                font_width, font_height);
+            font_object.canvas_context.globalCompositeOperation = "source-in";
+            font_object.canvas_context.fillStyle = color;
+            font_object.canvas_context.fillRect(0, 0, font_width, font_height);
+            canvas_context.drawImage(
+                font_object.canvas,
+                0, 0, font_width, font_height,
+                x + font_x_pos, y + font_y_pos, font_width, font_height
             );
+            font_x_pos += font_width;
         }
     }
 
@@ -835,21 +852,25 @@ class iLGE_2D_Engine {
         camera.canvas.width = Math.round(camera.width);
         camera.canvas.height = Math.round(camera.height);
         for (let element of camera.element) {
-            if (element.type === iLGE_2D_Object_Element_Type_Rectangle && element.visible) {
-                camera.canvas_context.fillStyle = element.color;
-                camera.canvas_context.fillRect(
-                    0, 0,
-                    camera.width, camera.height
-                );
-            }
-            if (element.type === iLGE_2D_Object_Element_Type_Sprite && element.visible) {
-                camera.canvas_context.drawImage(
-                    element.image,
-                    element.src_x, element.src_y,
-                    element.src_width, element.src_height,
-                    0, 0,
-                    camera.width, camera.height
-                );
+            if (!element.visible)
+                continue;
+            switch (element.type) {
+                case iLGE_2D_Object_Element_Type_Rectangle:
+                    camera.canvas_context.fillStyle = element.color;
+                    camera.canvas_context.fillRect(
+                        0, 0,
+                        camera.width, camera.height
+                    );
+                    break;
+                case iLGE_2D_Object_Element_Type_Sprite:
+                    camera.canvas_context.drawImage(
+                        element.image,
+                        element.src_x, element.src_y,
+                        element.src_width, element.src_height,
+                        0, 0,
+                        camera.width, camera.height
+                    );
+                    break;
             }
         }
         let vcamera = new iLGE_2D_Object(
@@ -907,6 +928,17 @@ class iLGE_2D_Engine {
                                     -object_half_size[1],
                                     object.width,
                                     object.height
+                                );
+                                break;
+                            case iLGE_2D_Object_Element_Type_Text:
+                                this.#drawText(
+                                    element.string, camera.canvas_context,
+                                    object_half_size[0],
+                                    object_half_size[1],
+                                    element.font_id,
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    element.px, element.color
                                 );
                                 break;
                         }
@@ -1017,8 +1049,6 @@ class iLGE_2D_Engine {
                 );
                 let object_width = object.width * object_scale,
                     object_height = object.height * object_scale;
-                object.scaled_width = object_width;
-                object.scaled_height = object_height;
                 object.scale_output = object_scale;
                 let object_half_size = [object_width / 2, object_height / 2];
                 this.canvas_context.save();
@@ -1049,6 +1079,17 @@ class iLGE_2D_Engine {
                                 -object_half_size[1],
                                 object_width,
                                 object_height
+                            );
+                            break;
+                        case iLGE_2D_Object_Element_Type_Text:
+                            this.#drawText(
+                                element.string, this.canvas_context,
+                                object_half_size[0],
+                                object_half_size[1],
+                                element.font_id,
+                                -object_half_size[0],
+                                -object_half_size[1],
+                                element.px * object_scale, element.color
                             );
                             break;
                     }
@@ -1364,13 +1405,13 @@ class iLGE_2D_Engine {
                             return;
                         }
                         let imageData = xhr.response;
+                        source_object.source_data = imageData;
                         source.onload = function () {
                             isThis.#loaded_sources++;
                         };
                         source.src = URL.createObjectURL(
                             new Blob([imageData, { type: "image/mpeg" }])
                         );
-                        source_object.source_data = imageData;
                     };
                     xhr.send();
                     this.#source.push(source_object);
@@ -1385,12 +1426,11 @@ class iLGE_2D_Engine {
                             return;
                         }
                         let audioData = xhr.response;
+                        source_object.source_data = audioData;
                         source.src = URL.createObjectURL(
                             new Blob([audioData, { type: "audio/mpeg" }])
                         );
-                        isThis.#source[i].source_data = audioData;
                         isThis.#loaded_sources++;
-                        source_object.source_data = audioData;
                     };
                     xhr.send();
                     this.#source.push(source_object);

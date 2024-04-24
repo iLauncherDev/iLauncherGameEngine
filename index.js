@@ -1,6 +1,14 @@
 let game = new iLGE_2D_Engine(
-    "Test", ["PDV437.png", "DitherSprites.png", "clang.ogg"],
-    document.getElementById("GameScreen"), 640, 480, true);
+    "Test",
+    [
+        "PDV437.png",
+        "DitherSprites.png",
+        "clang.ogg"
+    ],
+    document.getElementById("GameScreen"),
+    320, 200,
+    true
+);
 
 let PDV437 = new iLGE_2D_Object_Font(
     game.getSourceObject("PDV437.png"), "PDV437", 9, 16,
@@ -112,18 +120,31 @@ function DitherTransition(engine) {
  * @param {iLGE_2D_Engine} engine 
  */
 player.start_function = function (engine) {
-    this.stamina_hud_green = new iLGE_2D_Object("hud0", null, iLGE_2D_Object_Type_Custom, 0, 0, 0, 320, 128, 8, 0, 0);
+    this.stamina_level = new iLGE_2D_Object(
+        "hud0", null, iLGE_2D_Object_Type_Custom,
+        0, 0, 0, 320, 9 * 4, 16
+    );
+    this.stamina_level.addElement(
+        new iLGE_2D_Object_Element_Text(
+            "PDV437", "PDV437", null, 16, "#000000", true
+        )
+    );
+    this.stamina_hud_green = new iLGE_2D_Object(
+        "hud1", null, iLGE_2D_Object_Type_Custom,
+        0, 0, 0, 320, 128, 8
+    );
     this.stamina_hud_green.addElement(
         new iLGE_2D_Object_Element_Rectangle("#00ff00", "wall", true)
     );
     this.stamina_hud_red = new iLGE_2D_Object(
-        "hud1", null, iLGE_2D_Object_Type_Custom, 0, 0, this.stamina_hud_green.rotation,
+        "hud2", null, iLGE_2D_Object_Type_Custom, 0, 0, this.stamina_hud_green.rotation,
         this.stamina_hud_green.scale, this.stamina_hud_green.width, this.stamina_hud_green.height, 0, 0);
     this.stamina_hud_red.addElement(
         new iLGE_2D_Object_Element_Rectangle("#ff0000", "wall", true)
     );
     game.addHudObject(this.stamina_hud_red);
     game.addHudObject(this.stamina_hud_green);
+    game.addHudObject(this.stamina_level);
     this.collider = new iLGE_2D_Object_Element_Collider(
         false, false, this.id + "_collder",
         0, 0, this.width, this.height);
@@ -134,7 +155,7 @@ player.start_function = function (engine) {
     this.gamepad_sensitivity = 16;
     this.mouse_sensitivity = 1 / 4;
     this.camera_rotation_delay = 4;
-    player.addElement(
+    this.addElement(
         this.collider
     );
 }
@@ -144,11 +165,22 @@ player.start_function = function (engine) {
  * @param {iLGE_2D_Engine} engine 
  */
 player.update_function = function (engine) {
-    this.stamina_hud_green.width = (this.stamina / this.max_stamina) * this.stamina_hud_red.width;
+    let stamina = this.stamina / this.max_stamina;
+    this.stamina_hud_green.width = stamina * this.stamina_hud_red.width;
     this.stamina_hud_red.x = 4 * this.stamina_hud_red.scale_output;
     this.stamina_hud_green.x = this.stamina_hud_red.x;
-    this.stamina_hud_red.y = (engine.height - this.stamina_hud_red.scaled_height) - 4 * this.stamina_hud_red.scale_output;
+    this.stamina_hud_red.y =
+        (engine.height - this.stamina_hud_red.height * this.stamina_hud_red.scale_output)
+        - 4 * this.stamina_hud_red.scale_output;
     this.stamina_hud_green.y = this.stamina_hud_red.y;
+    this.stamina_level.element[0].string = Math.floor(stamina * 100) + "%";
+    this.stamina_level.width = this.stamina_level.element[0].string.length * PDV437.width;
+    this.stamina_level.y =
+        this.stamina_hud_red.y - this.stamina_level.height * this.stamina_level.scale_output;
+    this.stamina_level.x =
+        this.stamina_hud_red.x +
+        (this.stamina_hud_red.width * this.stamina_hud_red.scale_output
+            - this.stamina_level.width * this.stamina_level.scale_output) / 2;
     if (!transition_ended) {
         transition_ended = !DitherTransition(engine);
         return;
