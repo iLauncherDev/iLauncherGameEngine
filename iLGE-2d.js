@@ -12,10 +12,6 @@ const iLGE_2D_Object_Element_Type_Sprite_Transition_Effect = "Sprite_Transition_
 const __iLGE_2D_Object_Font = "Font";
 const iLGE_2D_Object_Type_Camera = "Camera";
 const iLGE_2D_Object_Type_Custom = "Custom";
-const iLGE_2D_Control_MouseX_Positive = "MouseX_Positive";
-const iLGE_2D_Control_MouseY_Positive = "MouseY_Positive";
-const iLGE_2D_Control_MouseX_Negative = "MouseX_Negative";
-const iLGE_2D_Control_MouseY_Negative = "MouseY_Negative";
 const iLGE_2D_Source_Type_Image = "Image_Source";
 const iLGE_2D_Source_Type_Audio = "Audio_Source";
 
@@ -274,6 +270,7 @@ class iLGE_2D_Object {
 
     x = 0;
     y = 0;
+    z_order = 0;
     old_x = 0;
     old_y = 0;
     rotation = 0;
@@ -658,7 +655,7 @@ class iLGE_2D_Engine {
                     if (!control_value)
                         continue;
                     if (!repeat)
-                        this.#controls[control_value] = 0;
+                        this.#controls[control] = 0;
                     return control_value;
                 }
         }
@@ -831,6 +828,64 @@ class iLGE_2D_Engine {
         }
     }
 
+    #draw_camera_scene(camera, vcamera, z_order) {
+        let z_order_find = false;
+        for (let object of this.#objects) {
+            if (object.type === iLGE_2D_Object_Type_Custom &&
+                object.element.length && object.z_order === z_order) {
+                z_order_find = true;
+                if (this.#collision_detection(vcamera, object)) {
+                    let object_half_size = object.getHalfSize();
+                    camera.canvas_context.save();
+                    camera.canvas_context.translate(
+                        object.x + object_half_size[0],
+                        object.y + object_half_size[1]
+                    );
+                    camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
+                    for (let element of object.element) {
+                        if (!element.visible)
+                            continue;
+                        switch (element.type) {
+                            case iLGE_2D_Object_Element_Type_Rectangle:
+                                camera.canvas_context.fillStyle = element.color;
+                                camera.canvas_context.fillRect(
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    object.width,
+                                    object.height
+                                );
+                                break;
+                            case iLGE_2D_Object_Element_Type_Sprite:
+                                camera.canvas_context.drawImage(
+                                    element.image,
+                                    element.src_x, element.src_y,
+                                    element.src_width, element.src_height,
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    object.width,
+                                    object.height
+                                );
+                                break;
+                            case iLGE_2D_Object_Element_Type_Text:
+                                this.#drawText(
+                                    element.string, camera.canvas_context,
+                                    object_half_size[0],
+                                    object_half_size[1],
+                                    element.font_id,
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    element.px, element.color
+                                );
+                                break;
+                        }
+                    }
+                    camera.canvas_context.restore();
+                }
+            }
+        }
+        return z_order_find;
+    }
+
     /**
     * @param camera {iLGE_2D_Object}
     */
@@ -896,56 +951,11 @@ class iLGE_2D_Engine {
             -camera.x - halfSize[0],
             -camera.y - halfSize[1]
         );
-        for (let object of this.#objects) {
-            if (object.type === iLGE_2D_Object_Type_Custom && object.element.length) {
-                if (this.#collision_detection(vcamera, object)) {
-                    let object_half_size = object.getHalfSize();
-                    camera.canvas_context.save();
-                    camera.canvas_context.translate(
-                        object.x + object_half_size[0],
-                        object.y + object_half_size[1]
-                    );
-                    camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
-                    for (let element of object.element) {
-                        if (!element.visible)
-                            continue;
-                        switch (element.type) {
-                            case iLGE_2D_Object_Element_Type_Rectangle:
-                                camera.canvas_context.fillStyle = element.color;
-                                camera.canvas_context.fillRect(
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    object.width,
-                                    object.height
-                                );
-                                break;
-                            case iLGE_2D_Object_Element_Type_Sprite:
-                                camera.canvas_context.drawImage(
-                                    element.image,
-                                    element.src_x, element.src_y,
-                                    element.src_width, element.src_height,
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    object.width,
-                                    object.height
-                                );
-                                break;
-                            case iLGE_2D_Object_Element_Type_Text:
-                                this.#drawText(
-                                    element.string, camera.canvas_context,
-                                    object_half_size[0],
-                                    object_half_size[1],
-                                    element.font_id,
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    element.px, element.color
-                                );
-                                break;
-                        }
-                    }
-                    camera.canvas_context.restore();
-                }
-            }
+        let z_order = 0;
+        while (true) {
+            if (!this.#draw_camera_scene(camera, vcamera, z_order))
+                break;
+            z_order++;
         }
         camera.canvas_context.restore();
         if (this.debug) {
@@ -1029,18 +1039,12 @@ class iLGE_2D_Engine {
         return effect_frame;
     }
 
-    #draw() {
-        if (this.#selected_camera) {
-            if (this.#selected_camera.scale < 1)
-                this.#selected_camera.scale = this.canvas.width;
-            this.#draw_camera(
-                this.#selected_camera,
-                0, 0,
-                this.canvas.width, this.canvas.height
-            );
-        }
+    #draw_hud(z_order) {
+        let z_order_find = false;
         for (let object of this.#objects_hud) {
-            if (object.type === iLGE_2D_Object_Type_Custom && object.element.length) {
+            if (object.type === iLGE_2D_Object_Type_Custom &&
+                object.element.length && object.z_order === z_order) {
+                z_order_find = true;
                 if (object.scale < 1)
                     object.scale = this.canvas.width;
                 let object_scale = Math.min(
@@ -1096,6 +1100,25 @@ class iLGE_2D_Engine {
                 }
                 this.canvas_context.restore();
             }
+        }
+        return z_order_find;
+    }
+
+    #draw() {
+        if (this.#selected_camera) {
+            if (this.#selected_camera.scale < 1)
+                this.#selected_camera.scale = this.canvas.width;
+            this.#draw_camera(
+                this.#selected_camera,
+                0, 0,
+                this.canvas.width, this.canvas.height
+            );
+        }
+        let z_order = 0;
+        while (true) {
+            if (!this.#draw_hud(z_order))
+                break;
+            z_order++;
         }
         for (let object of this.#objects_hud) {
             if (object.type === iLGE_2D_Object_Type_Custom && object.element.length) {
@@ -1183,8 +1206,13 @@ class iLGE_2D_Engine {
     }
 
     start() {
-        if (!this.pointerLock)
+        if (!this.pointerLock) {
             document.exitPointerLock();
+            this.canvas.style = "cursor: auto;";
+        }
+        else {
+            this.canvas.style = "cursor: none;";
+        }
         if (this.#loaded_sources < this.#total_sources) {
             window.requestAnimationFrame(this.start);
             return;
@@ -1264,12 +1292,35 @@ class iLGE_2D_Engine {
     #mouse_handler(event, isThis, type) {
         switch (type) {
             case "Movement":
-                let mouseX = event.movementX,
-                    mouseY = event.movementY;
-                isThis.#controls[iLGE_2D_Control_MouseX_Positive] = mouseX;
-                isThis.#controls[iLGE_2D_Control_MouseY_Positive] = mouseY;
-                isThis.#controls[iLGE_2D_Control_MouseX_Negative] = -mouseX;
-                isThis.#controls[iLGE_2D_Control_MouseY_Negative] = -mouseY;
+                let movementX = event.movementX,
+                    movementY = event.movementY;
+                let clientX = event.clientX,
+                    clientY = event.clientY;
+                isThis.#controls["Mouse_ClientX_Positive"] = clientX;
+                isThis.#controls["Mouse_ClientY_Positive"] = clientY;
+                isThis.#controls["Mouse_ClientX_Negative"] = -clientX;
+                isThis.#controls["Mouse_ClientY_Negative"] = -clientY;
+                isThis.#controls["Mouse_MovementX_Positive"] = movementX;
+                isThis.#controls["Mouse_MovementY_Positive"] = movementY;
+                isThis.#controls["Mouse_MovementX_Negative"] = -movementX;
+                isThis.#controls["Mouse_MovementY_Negative"] = -movementY;
+                break;
+            case "ContextMenu":
+                event.preventDefault();
+                break;
+            case "ButtonDown":
+                if (isThis.pointerLock)
+                    isThis.canvas.requestPointerLock({
+                        unadjustedMovement: true,
+                    });
+                isThis.#controls["Mouse_Button_" + event.button] = true;
+                break;
+            case "ButtonUp":
+                if (isThis.pointerLock)
+                    isThis.canvas.requestPointerLock({
+                        unadjustedMovement: true,
+                    });
+                isThis.#controls["Mouse_Button_" + event.button] = false;
                 break;
         }
     }
@@ -1464,15 +1515,21 @@ class iLGE_2D_Engine {
             function (event) {
                 isThis.#resize_handler(event, isThis);
             }, true);
-        this.canvas.addEventListener("click", function (event) {
-            if (isThis.pointerLock)
-                isThis.canvas.requestPointerLock({
-                    unadjustedMovement: false,
-                });
-        }, true);
         this.canvas.addEventListener("mousemove",
             function (event) {
                 isThis.#mouse_handler(event, isThis, "Movement");
+            }, true);
+        this.canvas.addEventListener("mousedown",
+            function (event) {
+                isThis.#mouse_handler(event, isThis, "ButtonDown");
+            }, true);
+        this.canvas.addEventListener("mouseup",
+            function (event) {
+                isThis.#mouse_handler(event, isThis, "ButtonUp");
+            }, true);
+        this.canvas.addEventListener("contextmenu",
+            function (event) {
+                isThis.#mouse_handler(event, isThis, "ContextMenu");
             }, true);
         window.addEventListener("keydown",
             function (event) {

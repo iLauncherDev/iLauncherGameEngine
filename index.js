@@ -1,6 +1,7 @@
 let game = new iLGE_2D_Engine(
     "Test",
     [
+        "CursorSprite.png",
         "PDV437.png",
         "DitherSprites.png",
         "clang.ogg"
@@ -19,8 +20,6 @@ game.addObject(PDV437);
 
 let clang_audio = game.getSourceObject("clang.ogg");
 let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, 0, 0);
-game.debug = false;
-game.occlusion_culling_test = false;
 
 let transition_ended = false, transition_loop = false;
 
@@ -74,19 +73,51 @@ game.control_map_set_default("Down", "Keyboard_Code_KeyS");
 game.control_map_set_default("Left", "Keyboard_Code_KeyA");
 game.control_map_set_default("Right", "Keyboard_Code_KeyD");
 game.control_map_set_default("RUN",
-    ["Keyboard_Code_ShiftLeft", "Keyboard_Code_ShiftRight", "Gamepad0_Button_10"]
+    [
+        "Keyboard_Code_ShiftLeft",
+        "Keyboard_Code_ShiftRight",
+        "Gamepad0_Button_10"
+    ]
 );
 game.control_map_set_default("Interact",
-    ["Keyboard_Code_KeyQ", "Gamepad0_Button_2"]
+    [
+        "Keyboard_Code_KeyQ",
+        "Gamepad0_Button_2",
+        "Mouse_Button_0"
+    ]
 );
 game.control_map_set_default("Transition",
-    ["Keyboard_Code_KeyE", "Gamepad0_Button_0"]
+    [
+        "Keyboard_Code_KeyE",
+        "Gamepad0_Button_0"
+    ]
 );
-game.control_map_set_default("MouseX", iLGE_2D_Control_MouseX_Positive);
 game.control_map_set_default("MovementX", "Gamepad0_Axis_0_Positive");
 game.control_map_set_default("MovementY", "Gamepad0_Axis_1_Positive");
 game.control_map_set_default("MovementX1",
-    ["Gamepad0_Axis_3_Negative"]
+    [
+        "Gamepad0_Axis_3_Negative"
+    ]
+);
+game.control_map_set_default("CursorX",
+    [
+        "Mouse_ClientX_Positive"
+    ]
+);
+game.control_map_set_default("CursorY",
+    [
+        "Mouse_ClientY_Positive"
+    ]
+);
+game.control_map_set_default("CursorMovementX",
+    [
+        "Mouse_MovementX_Positive"
+    ]
+);
+game.control_map_set_default("CursorMovementY",
+    [
+        "Mouse_MovementY_Positive"
+    ]
 );
 game.control_map_restore_default();
 game.control_map_save();
@@ -124,27 +155,40 @@ player.start_function = function (engine) {
         "hud0", null, iLGE_2D_Object_Type_Custom,
         0, 0, 0, 320, 9 * 4, 16
     );
+    this.cursor = new iLGE_2D_Object(
+        "hud1", "cursor", iLGE_2D_Object_Type_Custom,
+        0, 0, 0, 680, 48, 68
+    );
+    this.cursor.addElement(
+        new iLGE_2D_Object_Element_Sprite(
+            engine.getSourceObject("CursorSprite.png"),
+            "CursorSprite", true, 0, 0, 48, 68
+        )
+    );
     this.stamina_level.addElement(
         new iLGE_2D_Object_Element_Text(
             "PDV437", "PDV437", null, 16, "#000000", true
         )
     );
     this.stamina_hud_green = new iLGE_2D_Object(
-        "hud1", null, iLGE_2D_Object_Type_Custom,
+        "hud2", null, iLGE_2D_Object_Type_Custom,
         0, 0, 0, 320, 128, 8
     );
     this.stamina_hud_green.addElement(
         new iLGE_2D_Object_Element_Rectangle("#00ff00", "wall", true)
     );
     this.stamina_hud_red = new iLGE_2D_Object(
-        "hud2", null, iLGE_2D_Object_Type_Custom, 0, 0, this.stamina_hud_green.rotation,
+        "hud3", null, iLGE_2D_Object_Type_Custom, 0, 0, this.stamina_hud_green.rotation,
         this.stamina_hud_green.scale, this.stamina_hud_green.width, this.stamina_hud_green.height, 0, 0);
     this.stamina_hud_red.addElement(
         new iLGE_2D_Object_Element_Rectangle("#ff0000", "wall", true)
     );
-    game.addHudObject(this.stamina_hud_red);
-    game.addHudObject(this.stamina_hud_green);
-    game.addHudObject(this.stamina_level);
+    this.cursor.z_order = 1;
+    this.z_order = 1;
+    engine.addHudObject(this.cursor);
+    engine.addHudObject(this.stamina_level);
+    engine.addHudObject(this.stamina_hud_red);
+    engine.addHudObject(this.stamina_hud_green);
     this.collider = new iLGE_2D_Object_Element_Collider(
         false, false, this.id + "_collder",
         0, 0, this.width, this.height);
@@ -158,6 +202,28 @@ player.start_function = function (engine) {
     this.addElement(
         this.collider
     );
+    /**
+     * 
+     * @param {iLGE_2D_Engine} engine 
+     */
+    this.cursor_update = function (engine, movementX, movementY, isMovement) {
+        if (isMovement) {
+            this.cursor.x += movementX;
+            this.cursor.y += movementY;
+        }
+        else {
+            this.cursor.x = movementX;
+            this.cursor.y = movementY;
+        }
+        if (this.cursor.x < 0)
+            this.cursor.x = -1;
+        if (this.cursor.y < 0)
+            this.cursor.y = -1;
+        if (this.cursor.x >= engine.width)
+            this.cursor.x = engine.width - 1;
+        if (this.cursor.y >= engine.height)
+            this.cursor.y = engine.height - 1;
+    };
 }
 
 /**
@@ -165,6 +231,11 @@ player.start_function = function (engine) {
  * @param {iLGE_2D_Engine} engine 
  */
 player.update_function = function (engine) {
+    let movementX = engine.control_map_get("CursorMovementX", false),
+        movementY = engine.control_map_get("CursorMovementY", false),
+        clientX = engine.control_map_get("CursorX", true),
+        clientY = engine.control_map_get("CursorY", true);
+    this.cursor_update(engine, movementX, movementY, true);
     let stamina = this.stamina / this.max_stamina;
     this.stamina_hud_green.width = stamina * this.stamina_hud_red.width;
     this.stamina_hud_red.x = 4 * this.stamina_hud_red.scale_output;
@@ -212,7 +283,7 @@ player.update_function = function (engine) {
     let vector_movement = new iLGE_2D_Vector2();
     let collided_wall = null;
     this.rotation +=
-        (engine.control_map_get("MouseX", false) * this.mouse_sensitivity -
+        (movementX * this.mouse_sensitivity -
             engine.control_map_get("MovementX1", false) * this.gamepad_sensitivity * engine.deltaTime);
     vector_movement.x = Left * this.speed * engine.deltaTime;
     vector_movement.y = Up * this.speed * engine.deltaTime;
