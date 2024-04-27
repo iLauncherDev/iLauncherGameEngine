@@ -1,3 +1,7 @@
+# 0.1.13
+    code style adjustiment
+    improve #smartClean in class iLGE_2D_Engine
+
 # 0.1.12
     fix a potential problem in collision preparation and detection
     optimize collision checker

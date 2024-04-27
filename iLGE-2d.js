@@ -484,12 +484,9 @@ class iLGE_2D_Engine {
      * @param {Array} array2 
      */
     #smartClean(array1, array2) {
-        for (let i = array2.length - 1; i >= 0; i--) {
-            for (let j = array1.length - 1; j >= 0; j--) {
-                let array1_object = array1[j];
-                if (!this.#smartFind(array2[i], array1_object.id)) {
-                    array1.splice(j, 1);
-                }
+        for (let i = array1.length - 1; i >= 0; i--) {
+            if (!this.#smartFind(array2, array1[i].id)) {
+                array1.splice(i, 1);
             }
         }
     }
@@ -1135,8 +1132,9 @@ class iLGE_2D_Engine {
         }
         let z_order = 0;
         while (true) {
-            if (!this.#draw_hud(z_order))
+            if (!this.#draw_hud(z_order)) {
                 break;
+            }
             z_order++;
         }
         for (let object of this.#objects_hud) {
