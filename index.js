@@ -11,6 +11,8 @@ let game = new iLGE_2D_Engine(
     true
 );
 
+game.title = "Eat The Walls!";
+
 let PDV437 = new iLGE_2D_Object_Font(
     game.getSourceObject("PDV437.png"), "PDV437", 9, 16,
     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[]"
@@ -155,8 +157,17 @@ player.start_function = function (engine) {
         "hud0", null, iLGE_2D_Object_Type_Custom,
         0, 0, 0, 320, 9 * 4, 16
     );
+    this.game_title = new iLGE_2D_Object(
+        "hud1", null, iLGE_2D_Object_Type_Custom,
+        0, 0, 0, 320, 320, 16
+    );
+    this.game_title.addElement(
+        new iLGE_2D_Object_Element_Text(
+            "PDV437", "PDV437", engine.title, 16, "#000000", true
+        )
+    );
     this.cursor = new iLGE_2D_Object(
-        "hud1", "cursor", iLGE_2D_Object_Type_Custom,
+        "hud2", "cursor", iLGE_2D_Object_Type_Custom,
         0, 0, 0, 680, 48, 68
     );
     this.cursor.addElement(
@@ -171,14 +182,14 @@ player.start_function = function (engine) {
         )
     );
     this.stamina_hud_green = new iLGE_2D_Object(
-        "hud2", null, iLGE_2D_Object_Type_Custom,
+        "hud3", null, iLGE_2D_Object_Type_Custom,
         0, 0, 0, 320, 128, 8
     );
     this.stamina_hud_green.addElement(
         new iLGE_2D_Object_Element_Rectangle("#00ff00", "wall", true)
     );
     this.stamina_hud_red = new iLGE_2D_Object(
-        "hud3", null, iLGE_2D_Object_Type_Custom, 0, 0, this.stamina_hud_green.rotation,
+        "hud4", null, iLGE_2D_Object_Type_Custom, 0, 0, this.stamina_hud_green.rotation,
         this.stamina_hud_green.scale, this.stamina_hud_green.width, this.stamina_hud_green.height, 0, 0);
     this.stamina_hud_red.addElement(
         new iLGE_2D_Object_Element_Rectangle("#ff0000", "wall", true)
@@ -186,6 +197,7 @@ player.start_function = function (engine) {
     this.cursor.z_order = 1;
     this.z_order = 1;
     engine.addHudObject(this.cursor);
+    engine.addHudObject(this.game_title);
     engine.addHudObject(this.stamina_level);
     engine.addHudObject(this.stamina_hud_red);
     engine.addHudObject(this.stamina_hud_green);
@@ -237,6 +249,8 @@ player.update_function = function (engine) {
         clientY = engine.control_map_get("CursorY", true);
     this.cursor_update(engine, movementX, movementY, true);
     let stamina = this.stamina / this.max_stamina;
+    this.game_title.x = 4 * this.game_title.scale_output;
+    this.game_title.y = this.game_title.x;
     this.stamina_hud_green.width = stamina * this.stamina_hud_red.width;
     this.stamina_hud_red.x = 4 * this.stamina_hud_red.scale_output;
     this.stamina_hud_green.x = this.stamina_hud_red.x;

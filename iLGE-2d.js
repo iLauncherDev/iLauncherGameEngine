@@ -1290,20 +1290,27 @@ class iLGE_2D_Engine {
      * @param {String} type 
      */
     #mouse_handler(event, isThis, type) {
+        const mouse_clientX_string = "Mouse_ClientX";
+        const mouse_clientY_string = "Mouse_ClientY";
+        const mouse_movementX_string = "Mouse_MovementX";
+        const mouse_movementY_string = "Mouse_MovementY";
+        const mouse_button_toggled_string = "Mouse_Button_Toggled";
+        if (!isThis.#controls[mouse_button_toggled_string])
+            isThis.#controls[mouse_button_toggled_string] = [];
         switch (type) {
             case "Movement":
                 let movementX = event.movementX,
                     movementY = event.movementY;
                 let clientX = event.clientX,
                     clientY = event.clientY;
-                isThis.#controls["Mouse_ClientX_Positive"] = clientX;
-                isThis.#controls["Mouse_ClientY_Positive"] = clientY;
-                isThis.#controls["Mouse_ClientX_Negative"] = -clientX;
-                isThis.#controls["Mouse_ClientY_Negative"] = -clientY;
-                isThis.#controls["Mouse_MovementX_Positive"] = movementX;
-                isThis.#controls["Mouse_MovementY_Positive"] = movementY;
-                isThis.#controls["Mouse_MovementX_Negative"] = -movementX;
-                isThis.#controls["Mouse_MovementY_Negative"] = -movementY;
+                isThis.#controls[mouse_clientX_string + "_Positive"] = clientX;
+                isThis.#controls[mouse_clientY_string + "_Positive"] = clientY;
+                isThis.#controls[mouse_clientX_string + "_Negative"] = -clientX;
+                isThis.#controls[mouse_clientY_string + "_Negative"] = -clientY;
+                isThis.#controls[mouse_movementX_string + "_Positive"] = movementX;
+                isThis.#controls[mouse_movementY_string + "_Positive"] = movementY;
+                isThis.#controls[mouse_movementX_string + "_Negative"] = -movementX;
+                isThis.#controls[mouse_movementY_string + "_Negative"] = -movementY;
                 break;
             case "ContextMenu":
                 event.preventDefault();
@@ -1313,6 +1320,11 @@ class iLGE_2D_Engine {
                     isThis.canvas.requestPointerLock({
                         unadjustedMovement: true,
                     });
+                if (!isThis.#controls[mouse_button_toggled_string][event.button]) {
+                    isThis.#controls["Mouse_Button_" + event.button + "_Toggle"] =
+                        isThis.#controls["Mouse_Button_" + event.button + "_Toggle"] ? false : true;
+                    isThis.#controls[mouse_button_toggled_string][event.button] = true;
+                }
                 isThis.#controls["Mouse_Button_" + event.button] = true;
                 break;
             case "ButtonUp":
@@ -1321,6 +1333,7 @@ class iLGE_2D_Engine {
                         unadjustedMovement: true,
                     });
                 isThis.#controls["Mouse_Button_" + event.button] = false;
+                isThis.#controls[mouse_button_toggled_string][event.button] = false;
                 break;
         }
     }
@@ -1332,10 +1345,54 @@ class iLGE_2D_Engine {
      * @param {Boolean} bool 
      */
     #keyboard_handler(event, isThis, bool) {
-        isThis.#controls["Keyboard_" + "Code_" + event.code] = bool;
-        isThis.#controls["Keyboard_" + "Keycode_" + event.keyCode] = bool;
-        isThis.#controls["Keyboard_" + "Which_" + event.which] = bool;
-        isThis.#controls["Keyboard_" + "Key" + event.key] = bool;
+        const keyborad_code_tag = "Keyboard_Code";
+        const keyborad_keycode_tag = "Keyboard_Keycode";
+        const keyborad_which_tag = "Keyboard_Which";
+        const keyborad_key_tag = "Keyboard_Key";
+        const keyboard_code_key = keyborad_code_tag + "_" + event.code;
+        const keyboard_keycode_key = keyborad_keycode_tag + "_" + event.code;
+        const keyboard_which_key = keyborad_which_tag + "_" + event.code;
+        const keyboard_key_key = keyborad_key_tag + "_" + event.code;
+        if (!isThis.#controls[keyborad_code_tag + "_Toggled"])
+            isThis.#controls[keyborad_code_tag + "_Toggled"] = [];
+        if (!isThis.#controls[keyborad_keycode_tag + "_Toggled"])
+            isThis.#controls[keyborad_keycode_tag + "_Toggled"] = [];
+        if (!isThis.#controls[keyborad_which_tag + "_Toggled"])
+            isThis.#controls[keyborad_which_tag + "_Toggled"] = [];
+        if (!isThis.#controls[keyborad_key_tag + "_Toggled"])
+            isThis.#controls[keyborad_key_tag + "_Toggled"] = [];
+        if (bool) {
+            if (!isThis.#controls[keyborad_code_tag + "_Toggled"][keyboard_code_key]) {
+                isThis.#controls[keyboard_code_key + "_Toggle"] =
+                    isThis.#controls[keyboard_code_key + "_Toggle"] ? false : true;
+                isThis.#controls[keyborad_code_tag + "_Toggled"][keyboard_code_key] = true;
+            }
+            if (!isThis.#controls[keyborad_keycode_tag + "_Toggled"][keyboard_keycode_key]) {
+                isThis.#controls[keyboard_keycode_key + "_Toggle"] =
+                    isThis.#controls[keyboard_keycode_key + "_Toggle"] ? false : true;
+                isThis.#controls[keyborad_keycode_tag + "_Toggled"][keyboard_keycode_key] = true;
+            }
+            if (!isThis.#controls[keyborad_which_tag + "_Toggled"][keyboard_which_key]) {
+                isThis.#controls[keyboard_which_key + "_Toggle"] =
+                    isThis.#controls[keyboard_which_key + "_Toggle"] ? false : true;
+                isThis.#controls[keyborad_which_tag + "_Toggled"][keyboard_which_key] = true;
+            }
+            if (!isThis.#controls[keyborad_key_tag + "_Toggled"][keyboard_key_key]) {
+                isThis.#controls[keyboard_key_key + "_Toggle"] =
+                    isThis.#controls[keyboard_key_key + "_Toggle"] ? false : true;
+                isThis.#controls[keyborad_key_tag + "_Toggled"][keyboard_key_key] = true;
+            }
+        }
+        else {
+            isThis.#controls[keyborad_code_tag + "_Toggled"][keyboard_code_key] = false;
+            isThis.#controls[keyborad_keycode_tag + "_Toggled"][keyboard_keycode_key] = false;
+            isThis.#controls[keyborad_which_tag + "_Toggled"][keyboard_which_key] = false;
+            isThis.#controls[keyborad_key_tag + "_Toggled"][keyboard_key_key] = false;
+        }
+        isThis.#controls[keyboard_code_key] = bool;
+        isThis.#controls[keyboard_keycode_key] = bool;
+        isThis.#controls[keyboard_which_key] = bool;
+        isThis.#controls[keyboard_key_key] = bool;
     }
 
     /**
