@@ -128,6 +128,8 @@ game.addObject(player);
 game.addHudObject(transition_effect);
 createRoom(128, 128, 0, 0);
 
+let total_walls = game.countObjectByClass("wall"), eated_walls = 0;
+
 /**
  * 
  * @param {iLGE_2D_Engine} engine 
@@ -159,11 +161,11 @@ player.start_function = function (engine) {
     );
     this.game_title = new iLGE_2D_Object(
         "hud1", null, iLGE_2D_Object_Type_Custom,
-        0, 0, 0, 320, 320, 16
+        0, 0, 0, 320, 320, 320
     );
     this.game_title.addElement(
         new iLGE_2D_Object_Element_Text(
-            "PDV437", "PDV437", engine.title, 16, "#000000", true
+            "PDV437", "PDV437", null, 16, "#000000", true
         )
     );
     this.cursor = new iLGE_2D_Object(
@@ -195,7 +197,6 @@ player.start_function = function (engine) {
         new iLGE_2D_Object_Element_Rectangle("#ff0000", "wall", true)
     );
     this.cursor.z_order = 1;
-    this.z_order = 1;
     engine.addHudObject(this.cursor);
     engine.addHudObject(this.game_title);
     engine.addHudObject(this.stamina_level);
@@ -248,6 +249,9 @@ player.update_function = function (engine) {
         clientX = engine.control_map_get("CursorX", true),
         clientY = engine.control_map_get("CursorY", true);
     this.cursor_update(engine, movementX, movementY, true);
+    this.game_title.element[0].string =
+        engine.title + "\n" +
+        eated_walls + "/" + total_walls + " Eated Walls";
     let stamina = this.stamina / this.max_stamina;
     this.game_title.x = 4 * this.game_title.scale_output;
     this.game_title.y = this.game_title.x;
@@ -340,6 +344,7 @@ player.update_function = function (engine) {
         if (collided_wall) {
             engine.removeObject(collided_wall.id);
             clang_audio.cloneIt().playAudio();
+            eated_walls++;
         }
     }
 }

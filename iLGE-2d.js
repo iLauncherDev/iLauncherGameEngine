@@ -307,20 +307,6 @@ class iLGE_2D_Object {
 
     /**
      * 
-     * @param {Array} array1 
-     * @param {Array} array2 
-     */
-    #smartClean(array1, array2) {
-        for (let i = array1.length - 1; i >= 0; i--) {
-            let array_object = array1[i];
-            if (!this.#smartFind(array2, array_object.id)) {
-                array1.splice(i, 1);
-            }
-        }
-    }
-
-    /**
-     * 
      * @param {Array} array 
      * @param {*} object 
      */
@@ -498,10 +484,12 @@ class iLGE_2D_Engine {
      * @param {Array} array2 
      */
     #smartClean(array1, array2) {
-        for (let i = array1.length - 1; i >= 0; i--) {
-            let array_object = array1[i];
-            if (!this.#smartFind(array2, array_object.id)) {
-                array1.splice(i, 1);
+        for (let i = array2.length - 1; i >= 0; i--) {
+            for (let j = array1.length - 1; j >= 0; j--) {
+                let array1_object = array1[j];
+                if (!this.#smartFind(array2[i], array1_object.id)) {
+                    array1.splice(j, 1);
+                }
             }
         }
     }
@@ -534,6 +522,36 @@ class iLGE_2D_Engine {
                 return;
             }
         }
+    }
+
+    /**
+    * 
+    * @param {String} class_id
+    * @returns {Number}
+    */
+    countObjectByClass(class_id) {
+        let number = 0;
+        for (let array_object of this.#objects) {
+            if (array_object.class_id === class_id) {
+                number++;
+            }
+        }
+        return number;
+    }
+
+    /**
+    * 
+    * @param {String} class_id
+    * @returns {Number}
+    */
+    countHudObjectByClass(class_id) {
+        let number = 0;
+        for (let array_object of this.#objects) {
+            if (array_object.class_id === class_id) {
+                number++;
+            }
+        }
+        return number;
     }
 
     /**
@@ -953,8 +971,9 @@ class iLGE_2D_Engine {
         );
         let z_order = 0;
         while (true) {
-            if (!this.#draw_camera_scene(camera, vcamera, z_order))
+            if (!this.#draw_camera_scene(camera, vcamera, z_order)) {
                 break;
+            }
             z_order++;
         }
         camera.canvas_context.restore();
@@ -1234,8 +1253,6 @@ class iLGE_2D_Engine {
         for (let object of this.#objects) {
             switch (object.type) {
                 case iLGE_2D_Object_Type_Custom:
-                    if (object.findElementByType())
-                        objects_with_collider_element.push(object);
                     for (let element of object.element) {
                         if (element.type === iLGE_2D_Object_Element_Type_Collider) {
                             if (element.blocker)
