@@ -1,3 +1,7 @@
+# 0.1.12
+    fix a potential problem in collision preparation and detection
+    optimize collision checker
+
 # 0.1.11
     added count*ObjectByClass functions in class iLGE_2D_Engine
     remove useless "if (object.findElementByType())"
