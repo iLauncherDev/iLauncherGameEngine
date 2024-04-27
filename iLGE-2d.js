@@ -901,6 +901,25 @@ class iLGE_2D_Engine {
         return z_order_find;
     }
 
+    #getZOrderInfo(array) {
+        let min = Infinity, max = -Infinity;
+        for (let object of array) {
+            switch (object.type) {
+                case iLGE_2D_Object_Type_Custom:
+                case iLGE_2D_Object_Type_Camera:
+                    if (object.z_order > max)
+                        max = object.z_order;
+                    if (object.z_order < min)
+                        min = object.z_order;
+                    break;
+            }
+        }
+        return {
+            min: min,
+            max: max,
+        };
+    }
+
     /**
     * @param camera {iLGE_2D_Object}
     */
@@ -966,12 +985,9 @@ class iLGE_2D_Engine {
             -camera.x - halfSize[0],
             -camera.y - halfSize[1]
         );
-        let z_order = 0;
-        while (true) {
-            if (!this.#draw_camera_scene(camera, vcamera, z_order)) {
-                break;
-            }
-            z_order++;
+        let z_order_info = this.#getZOrderInfo(this.#objects);
+        for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
+            this.#draw_camera_scene(camera, vcamera, z_order);
         }
         camera.canvas_context.restore();
         if (this.debug) {
@@ -1130,12 +1146,9 @@ class iLGE_2D_Engine {
                 this.canvas.width, this.canvas.height
             );
         }
-        let z_order = 0;
-        while (true) {
-            if (!this.#draw_hud(z_order)) {
-                break;
-            }
-            z_order++;
+        let z_order_info = this.#getZOrderInfo(this.#objects_hud);
+        for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
+            this.#draw_hud(z_order);
         }
         for (let object of this.#objects_hud) {
             if (object.type === iLGE_2D_Object_Type_Custom && object.element.length) {

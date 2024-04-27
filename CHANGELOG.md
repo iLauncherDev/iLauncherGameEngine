@@ -1,3 +1,6 @@
+# 0.1.14
+    improve z_order in class iLGE_2D_Object
+
 # 0.1.13
     code style adjustiment
     improve #smartClean in class iLGE_2D_Engine
