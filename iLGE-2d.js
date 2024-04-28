@@ -61,7 +61,7 @@ class iLGE_2D_Source {
     }
 
     setAudioTime(time = 0) {
-        this.currentTime = 0;
+        this.currentTime = time;
     }
 
     cloneIt() {
