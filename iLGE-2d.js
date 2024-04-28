@@ -949,7 +949,7 @@ class iLGE_2D_Engine {
         camera.height = object.height / scale;
         camera.canvas.width = Math.round(camera.width);
         camera.canvas.height = Math.round(camera.height);
-        //camera.canvas_context.imageSmoothingEnabled = false;
+        camera.canvas_context.imageSmoothingEnabled = false;
         for (let element of camera.element) {
             if (!element.visible)
                 continue;
