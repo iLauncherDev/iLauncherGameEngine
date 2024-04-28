@@ -910,6 +910,7 @@ class iLGE_2D_Engine {
     }
 
     #getZOrderInfo(array) {
+        return { min: 0, max: 1 };
         let min = Infinity, max = -Infinity;
         for (let object of array) {
             switch (object.type) {
