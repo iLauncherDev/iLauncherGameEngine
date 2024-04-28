@@ -1,6 +1,7 @@
 # 0.1.16
     added touch events
     added movement for touch events
+    added #control_map_get_helper function in class iLGE_2D_Engine
 
 # 0.1.15
     the camera is now rendered in hud

@@ -662,6 +662,33 @@ class iLGE_2D_Engine {
         this.#control_map_default[action] = control;
     }
 
+    #clone_array(array) {
+        let copy = [];
+        for (let i = 0; i < array.length; i++)
+            copy[i] = JSON.parse(JSON.stringify(array[i]));
+        return copy;
+    }
+
+    #control_map_get_helper(control, repeat) {
+        let control_value = this.#controls[control],
+            old_control_value = control_value;
+        if (!control_value)
+            return 0;
+        if (!repeat) {
+            switch (typeof control_value) {
+                case "object":
+                    control_value = this.#clone_array(old_control_value);
+                    for (let i = 0; i < old_control_value.length; i++)
+                        old_control_value[i].value = 0;
+                    break;
+                default:
+                    this.#controls[control] = 0;
+                    break;
+            }
+        }
+        return control_value;
+    }
+
     control_map_get(action, repeat) {
         let control1 = this.#control_map[action],
             control2 = this.#control_map_default[action],
@@ -670,19 +697,12 @@ class iLGE_2D_Engine {
 
         switch (typeof best_control) {
             case "string":
-                let control_value = this.#controls[best_control];
-                if (!control_value)
-                    break;
-                if (!repeat)
-                    this.#controls[best_control] = 0;
-                return control_value;
+                return this.#control_map_get_helper(best_control, repeat);
             case "object":
                 for (let control of best_control) {
-                    let control_value = this.#controls[control];
+                    let control_value = this.#control_map_get_helper(control, repeat);
                     if (!control_value)
                         continue;
-                    if (!repeat)
-                        this.#controls[control] = 0;
                     return control_value;
                 }
         }

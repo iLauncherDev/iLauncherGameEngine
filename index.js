@@ -127,8 +127,10 @@ game.control_map_set_default("CursorMovementY",
         "Mouse_MovementY_Positive"
     ]
 );
-game.control_map_set_default("TouchX", "Touch_MovementX_Positive");
-game.control_map_set_default("TouchY", "Touch_MovementY_Positive");
+game.control_map_set_default("TouchX", "Touch_ClientX_Positive");
+game.control_map_set_default("TouchY", "Touch_ClientY_Positive");
+game.control_map_set_default("TouchMovementX", "Touch_MovementX_Positive");
+game.control_map_set_default("TouchMovementY", "Touch_MovementY_Positive");
 game.control_map_restore_default();
 game.control_map_save();
 
@@ -256,17 +258,15 @@ player.update_function = function (engine) {
         movementY = engine.control_map_get("CursorMovementY", false),
         clientX = engine.control_map_get("CursorX", true),
         clientY = engine.control_map_get("CursorY", true),
-        touchX = engine.control_map_get("TouchX", true),
-        touchY = engine.control_map_get("TouchY", true);
+        touchmovementX = engine.control_map_get("TouchMovementX", false),
+        touchmovementY = engine.control_map_get("TouchMovementY", false);
     camera_hud.width = engine.width;
     camera_hud.height = engine.height;
-    if (touchX && touchY) {
-        for (let i = 0; i < touchX.length; i++) {
-            if (touchX[i].state === "Down" && touchY[i].state === "Down") {
-                movementX = touchX[i].value;
-                touchX[i].value = 0;
-                movementY = touchY[i].value;
-                touchY[i].value = 0;
+    if (touchmovementX && touchmovementY) {
+        for (let i = 0; i < touchmovementX.length; i++) {
+            if (touchmovementX[i].state === "Down" && touchmovementY[i].state === "Down") {
+                movementX = touchmovementX[i].value;
+                movementY = touchmovementY[i].value;
             }
         }
     }
