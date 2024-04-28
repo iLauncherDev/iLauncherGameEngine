@@ -1,5 +1,6 @@
 # 0.1.16
-    WIP touch events
+    added touch events
+    added movement for touch events
 
 # 0.1.15
     the camera is now rendered in hud

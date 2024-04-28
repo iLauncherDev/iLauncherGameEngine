@@ -1305,12 +1305,12 @@ class iLGE_2D_Engine {
      * @param {TouchList} touches 
      * @param {Boolean} positive 
      */
-    #handle_touchlist_array(isThis, touches, positive, state) {
+    #handle_touchlist_array(isThis, touches, positive, movement, state) {
         const sign = positive ? 1 : -1;
         const sign_tag = positive ? "_Positive" : "_Negative";
         const touch_tag = "Touch";
-        const clientX_tag = "_ClientX";
-        const clientY_tag = "_ClientY";
+        const clientX_tag = movement ? "_MovementX" : "_ClientX";
+        const clientY_tag = movement ? "_MovementY" : "_ClientY";
         if (!isThis.#controls[touch_tag + clientX_tag + sign_tag])
             isThis.#controls[touch_tag + clientX_tag + sign_tag] = [];
         if (!isThis.#controls[touch_tag + clientY_tag + sign_tag])
@@ -1330,30 +1330,31 @@ class iLGE_2D_Engine {
             );
             if (!objectX) {
                 objectX = {
-                    value: clientX,
+                    value: 0,
+                    old_value: 0,
                     id: id,
                     state: state,
                 };
                 isThis.#controls[touch_tag + clientX_tag + sign_tag].push(objectX);
             }
-            else {
-                objectX.value = clientX;
-                objectX.id = id;
-                objectX.state = state;
-            }
+            objectX.value = movement ? clientX - objectX.old_value : clientX;
+            objectX.old_value = clientX;
+            objectX.id = id;
+            objectX.state = state;
             if (!objectY) {
                 objectY = {
-                    value: clientY,
+                    value: 0,
+                    old_value: 0,
                     id: id,
                     state: state,
                 };
                 isThis.#controls[touch_tag + clientY_tag + sign_tag].push(objectY);
             }
-            else {
-                objectY.value = clientY;
-                objectY.id = id;
-                objectY.state = state;
-            }
+            objectY.value = movement ? clientY - objectY.old_value : clientY;
+            objectY.old_value = clientY;
+            objectY.id = id;
+            objectY.state = state;
+
         }
     }
 
@@ -1372,17 +1373,21 @@ class iLGE_2D_Engine {
         switch (type) {
             case "start":
             case "move":
-                isThis.#handle_touchlist_array(isThis, touches, true, "Down");
-                isThis.#handle_touchlist_array(isThis, touches, false, "Down");
+                isThis.#handle_touchlist_array(isThis, touches, true, false, "Down");
+                isThis.#handle_touchlist_array(isThis, touches, false, false, "Down");
+                isThis.#handle_touchlist_array(isThis, touches, true, true, "Down");
+                isThis.#handle_touchlist_array(isThis, touches, false, true, "Down");
                 break;
             case "leave":
             case "cancel":
-                isThis.#handle_touchlist_array(isThis, touches, true, "Cancel/Leave");
-                isThis.#handle_touchlist_array(isThis, touches, false, "Cancel/Leave");
+                isThis.#handle_touchlist_array(isThis, touches, true, false, "Cancel/Leave");
+                isThis.#handle_touchlist_array(isThis, touches, false, false, "Cancel/Leave");
                 break;
             case "end":
-                isThis.#handle_touchlist_array(isThis, touches, true, "Up");
-                isThis.#handle_touchlist_array(isThis, touches, false, "Up");
+                isThis.#handle_touchlist_array(isThis, touches, true, false, "Up");
+                isThis.#handle_touchlist_array(isThis, touches, false, false, "Up");
+                isThis.#handle_touchlist_array(isThis, touches, true, true, "Up");
+                isThis.#handle_touchlist_array(isThis, touches, false, true, "Up");
                 break;
         }
     }
