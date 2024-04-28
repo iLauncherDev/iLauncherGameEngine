@@ -127,6 +127,8 @@ game.control_map_set_default("CursorMovementY",
         "Mouse_MovementY_Positive"
     ]
 );
+game.control_map_set_default("TouchX", "Touch_ClientX_Positive");
+game.control_map_set_default("TouchY", "Touch_ClientY_Positive");
 game.control_map_restore_default();
 game.control_map_save();
 
@@ -253,10 +255,17 @@ player.update_function = function (engine) {
     let movementX = engine.control_map_get("CursorMovementX", false),
         movementY = engine.control_map_get("CursorMovementY", false),
         clientX = engine.control_map_get("CursorX", true),
-        clientY = engine.control_map_get("CursorY", true);
+        clientY = engine.control_map_get("CursorY", true),
+        touchX = engine.control_map_get("TouchX"),
+        touchY = engine.control_map_get("TouchY");
     camera_hud.width = engine.width;
     camera_hud.height = engine.height;
     this.cursor_update(engine, movementX, movementY, true);
+    if (touchX && touchY) {
+        if (touchX[0].state === "Down" && touchY[0].state === "Down") {
+            this.cursor_update(engine, touchX[0].value, touchY[0].value, false);
+        }
+    }
     this.game_title.element[0].string =
         engine.title + "\n" +
         eated_walls + "/" + total_walls + " Eated Walls";

@@ -1301,6 +1301,94 @@ class iLGE_2D_Engine {
 
     /**
      * 
+     * @param {this} isThis 
+     * @param {TouchList} touches 
+     * @param {Boolean} positive 
+     */
+    #handle_touchlist_array(isThis, touches, positive, state) {
+        const sign = positive ? 1 : -1;
+        const sign_tag = positive ? "_Positive" : "_Negative";
+        const touch_tag = "Touch";
+        const clientX_tag = "_ClientX";
+        const clientY_tag = "_ClientY";
+        if (!isThis.#controls[touch_tag + clientX_tag + sign_tag])
+            isThis.#controls[touch_tag + clientX_tag + sign_tag] = [];
+        if (!isThis.#controls[touch_tag + clientY_tag + sign_tag])
+            isThis.#controls[touch_tag + clientY_tag + sign_tag] = [];
+        for (let i = 0; i < touches.length; i++) {
+            const touch = touches[i];
+            let clientX = touch.clientX * sign * window.devicePixelRatio,
+                clientY = touch.clientY * sign * window.devicePixelRatio;
+            let id = touch.identifier % 10;
+            let objectX = isThis.#smartFind(
+                isThis.#controls[touch_tag + clientX_tag + sign_tag],
+                id
+            );
+            let objectY = isThis.#smartFind(
+                isThis.#controls[touch_tag + clientY_tag + sign_tag],
+                id
+            );
+            if (!objectX) {
+                objectX = {
+                    value: clientX,
+                    id: id,
+                    state: state,
+                };
+                isThis.#controls[touch_tag + clientX_tag + sign_tag].push(objectX);
+            }
+            else {
+                objectX.value = clientX;
+                objectX.id = id;
+                objectX.state = state;
+            }
+            if (!objectY) {
+                objectY = {
+                    value: clientY,
+                    id: id,
+                    state: state,
+                };
+                isThis.#controls[touch_tag + clientY_tag + sign_tag].push(objectY);
+            }
+            else {
+                objectY.value = clientY;
+                objectY.id = id;
+                objectY.state = state;
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param {TouchEvent} event 
+     * @param {this} isThis 
+     * @param {String} type 
+     */
+    #touch_handler(event, isThis, type) {
+        event.preventDefault();
+        const touch_tag = "Touch";
+        const state_tag = "_State";
+        isThis.#controls[touch_tag + state_tag] = true;
+        let touches = event.changedTouches;
+        switch (type) {
+            case "start":
+            case "move":
+                isThis.#handle_touchlist_array(isThis, touches, true, "Down");
+                isThis.#handle_touchlist_array(isThis, touches, false, "Down");
+                break;
+            case "leave":
+            case "cancel":
+                isThis.#handle_touchlist_array(isThis, touches, true, "Cancel/Leave");
+                isThis.#handle_touchlist_array(isThis, touches, false, "Cancel/Leave");
+                break;
+            case "end":
+                isThis.#handle_touchlist_array(isThis, touches, true, "Up");
+                isThis.#handle_touchlist_array(isThis, touches, false, "Up");
+                break;
+        }
+    }
+
+    /**
+     * 
      * @param {MouseEvent} event 
      * @param {this} isThis 
      * @param {String} type 
@@ -1587,6 +1675,26 @@ class iLGE_2D_Engine {
         window.addEventListener("resize",
             function (event) {
                 isThis.#resize_handler(event, isThis);
+            }, true);
+        this.canvas.addEventListener("touchstart",
+            function (event) {
+                isThis.#touch_handler(event, isThis, "start");
+            }, true);
+        this.canvas.addEventListener("touchend",
+            function (event) {
+                isThis.#touch_handler(event, isThis, "end");
+            }, true);
+        this.canvas.addEventListener("touchmove",
+            function (event) {
+                isThis.#touch_handler(event, isThis, "move");
+            }, true);
+        this.canvas.addEventListener("touchleave",
+            function (event) {
+                isThis.#touch_handler(event, isThis, "leave");
+            }, true);
+        this.canvas.addEventListener("touchcancel",
+            function (event) {
+                isThis.#touch_handler(event, isThis, "cancel");
             }, true);
         this.canvas.addEventListener("mousemove",
             function (event) {
