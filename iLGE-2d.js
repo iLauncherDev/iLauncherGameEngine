@@ -475,6 +475,13 @@ class iLGE_2D_Engine {
     #gamepad_button_string = "_Button_";
     #gamepad_axis_string = "_Axis_";
 
+    #clone_array(array) {
+        let copy = [];
+        for (let i = 0; i < array.length; i++)
+            copy[i] = Object.assign({}, array[i]);
+        return copy;
+    }
+
     /**
      * 
      * @param {Array} array 
@@ -660,13 +667,6 @@ class iLGE_2D_Engine {
 
     control_map_set_default(action, control) {
         this.#control_map_default[action] = control;
-    }
-
-    #clone_array(array) {
-        let copy = [];
-        for (let i = 0; i < array.length; i++)
-            copy[i] = JSON.parse(JSON.stringify(array[i]));
-        return copy;
     }
 
     #control_map_get_helper(control, repeat) {
