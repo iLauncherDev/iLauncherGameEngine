@@ -240,9 +240,9 @@ player.start_function = function (engine) {
             this.cursor.x = -1;
         if (this.cursor.y < 0)
             this.cursor.y = -1;
-        if (this.cursor.x >= engine.width)
+        if (this.cursor.x > engine.width)
             this.cursor.x = engine.width - 1;
-        if (this.cursor.y >= engine.height)
+        if (this.cursor.y > engine.height)
             this.cursor.y = engine.height - 1;
     };
 }
