@@ -1387,6 +1387,7 @@ class iLGE_2D_Engine {
      * @param {String} type 
      */
     #touch_handler(event, isThis, type) {
+        return;
         event.preventDefault();
         const touch_tag = "Touch";
         const state_tag = "_State";
