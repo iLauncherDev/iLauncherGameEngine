@@ -1,3 +1,8 @@
+# 0.1.15
+    the camera is now rendered in hud
+    code style adjustiment
+    added id in missing classes
+
 # 0.1.14
     improve z_order in class iLGE_2D_Object
 

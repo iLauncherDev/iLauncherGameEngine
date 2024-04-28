@@ -22,12 +22,18 @@ game.addObject(PDV437);
 
 let clang_audio = game.getSourceObject("clang.ogg");
 let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, 0, 0);
+let camera_hud = new iLGE_2D_Object("MyCameraHud", "camera_hud");
+camera_hud.addElement(
+    new iLGE_2D_Object_Element_Camera_Viewer(
+        camera, "Hud", true
+    )
+);
 
 let transition_ended = false, transition_loop = false;
 
 let transition_effect = new iLGE_2D_Object("Transition_Effect");
 transition_effect.dither = new iLGE_2D_Object_Element_Sprite_Transition_Effect(
-    game.getSourceObject("DitherSprites.png"), false, 2
+    game.getSourceObject("DitherSprites.png"), "Dither", false, 2
 );
 transition_effect.addElement(transition_effect.dither);
 
@@ -248,6 +254,8 @@ player.update_function = function (engine) {
         movementY = engine.control_map_get("CursorMovementY", false),
         clientX = engine.control_map_get("CursorX", true),
         clientY = engine.control_map_get("CursorY", true);
+    camera_hud.width = engine.width;
+    camera_hud.height = engine.height;
     this.cursor_update(engine, movementX, movementY, true);
     this.game_title.element[0].string =
         engine.title + "\n" +
@@ -349,5 +357,5 @@ player.update_function = function (engine) {
     }
 }
 
-game.setDefaultCamera(camera);
+game.addHudObject(camera_hud);
 game.start();

@@ -8,6 +8,7 @@ const iLGE_2D_Object_Element_Type_Sprite = "Sprite";
 const iLGE_2D_Object_Element_Type_Rectangle = "Rectangle";
 const iLGE_2D_Object_Element_Type_Collider = "Collider";
 const iLGE_2D_Object_Element_Type_Text = "Text";
+const iLGE_2D_Object_Element_Type_Camera_Viewer = "Camera_Viewer";
 const iLGE_2D_Object_Element_Type_Sprite_Transition_Effect = "Sprite_Transition_Effect";
 const __iLGE_2D_Object_Font = "Font";
 const iLGE_2D_Object_Type_Camera = "Camera";
@@ -157,6 +158,7 @@ class iLGE_2D_Vector2 {
 
 class iLGE_2D_Object_Element_Sprite {
     type = iLGE_2D_Object_Element_Type_Sprite;
+    id = "OBJID";
     visible = true;
     src_x = 0;
     src_y = 0;
@@ -180,6 +182,7 @@ class iLGE_2D_Object_Element_Sprite {
 class iLGE_2D_Object_Element_Rectangle {
     type = iLGE_2D_Object_Element_Type_Rectangle;
     color = "#000000";
+    id = "OBJID";
     visible = true;
     constructor(color, id, visible) {
         this.id = id;
@@ -190,8 +193,8 @@ class iLGE_2D_Object_Element_Rectangle {
 
 class iLGE_2D_Object_Element_Text {
     type = iLGE_2D_Object_Element_Type_Text;
-    font_id = 0;
-    id = 0;
+    font_id = "FONTID";
+    id = "OBJID";
     string = 0;
     px = 0;
     color = "#000000";
@@ -206,10 +209,23 @@ class iLGE_2D_Object_Element_Text {
     }
 }
 
+class iLGE_2D_Object_Element_Camera_Viewer {
+    type = iLGE_2D_Object_Element_Type_Camera_Viewer;
+    id = "OBJID";
+    camera = 0;
+    visible = true;
+    constructor(camera, id, visible) {
+        this.id = id;
+        this.camera = camera;
+        this.visible = visible;
+    }
+}
+
 class iLGE_2D_Object_Element_Collider {
     type = iLGE_2D_Object_Element_Type_Collider;
     blocker = false;
     noclip = false;
+    id = "OBJID";
     collided_objects = [];
     x = 0;
     y = 0;
@@ -245,17 +261,19 @@ class iLGE_2D_Object_Element_Collider {
 
 class iLGE_2D_Object_Element_Sprite_Transition_Effect {
     image = new Image();
+    id = "OBJID";
     type = iLGE_2D_Object_Element_Type_Sprite_Transition_Effect;
     visible = false;
     size = 0;
     src_index = 0;
     oldframe = 0;
 
-    constructor(source_object, visible, size) {
+    constructor(source_object, id, visible, size) {
         let image_object = null;
         if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
             return;
         image_object = source_object.source;
+        this.id = id;
         this.image = image_object;
         this.visible = visible;
         this.size = size;
@@ -264,9 +282,6 @@ class iLGE_2D_Object_Element_Sprite_Transition_Effect {
 
 class iLGE_2D_Object {
     id = "OBJID";
-
-    /* Reserverd For Camera */
-    allow_rendering = true;
 
     x = 0;
     y = 0;
@@ -436,9 +451,6 @@ class iLGE_2D_Engine {
 
     /* Hud Objects */
     #objects_hud = [];
-
-    /* Selected Camera */
-    #selected_camera = null;
 
     /* Controls Interrupts Value Array */
     #controls = {};
@@ -695,35 +707,6 @@ class iLGE_2D_Engine {
         this.control_map_load();
     }
 
-    /**
-     * 
-     * @param {iLGE_2D_Object} object 
-     * @param {Number} radians 
-     * @returns {Array}
-     */
-    #calculate_vertices(object, radians) {
-        let halfSize = object.getHalfSize();
-        let sin = Math.sin(radians), cos = Math.cos(radians);
-        return [
-            {
-                x: halfSize[0] + object.x + halfSize[0] * cos - halfSize[1] * sin,
-                y: halfSize[1] + object.y + halfSize[0] * sin + halfSize[1] * cos
-            },
-            {
-                x: halfSize[0] + object.x - halfSize[0] * cos - halfSize[1] * sin,
-                y: halfSize[1] + object.y - halfSize[0] * sin + halfSize[1] * cos
-            },
-            {
-                x: halfSize[0] + object.x - halfSize[0] * cos + halfSize[1] * sin,
-                y: halfSize[1] + object.y - halfSize[0] * sin - halfSize[1] * cos
-            },
-            {
-                x: halfSize[0] + object.x + halfSize[0] * cos + halfSize[1] * sin,
-                y: halfSize[1] + object.y + halfSize[0] * sin - halfSize[1] * cos
-            }
-        ];
-    }
-
     #getOverlapX(vertices1, vertices2) {
         let minX1 = Math.min(...vertices1.map(vertex => vertex.x));
         let maxX1 = Math.max(...vertices1.map(vertex => vertex.x));
@@ -846,56 +829,61 @@ class iLGE_2D_Engine {
     #draw_camera_scene(camera, vcamera, z_order) {
         let z_order_find = false;
         for (let object of this.#objects) {
-            if (object.type === iLGE_2D_Object_Type_Custom &&
-                object.element.length && object.z_order === z_order) {
-                z_order_find = true;
-                if (this.#collision_detection(vcamera, object)) {
-                    let object_half_size = object.getHalfSize();
-                    camera.canvas_context.save();
-                    camera.canvas_context.translate(
-                        object.x + object_half_size[0],
-                        object.y + object_half_size[1]
-                    );
-                    camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
-                    for (let element of object.element) {
-                        if (!element.visible)
-                            continue;
-                        switch (element.type) {
-                            case iLGE_2D_Object_Element_Type_Rectangle:
-                                camera.canvas_context.fillStyle = element.color;
-                                camera.canvas_context.fillRect(
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    object.width,
-                                    object.height
-                                );
-                                break;
-                            case iLGE_2D_Object_Element_Type_Sprite:
-                                camera.canvas_context.drawImage(
-                                    element.image,
-                                    element.src_x, element.src_y,
-                                    element.src_width, element.src_height,
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    object.width,
-                                    object.height
-                                );
-                                break;
-                            case iLGE_2D_Object_Element_Type_Text:
-                                this.#drawText(
-                                    element.string, camera.canvas_context,
-                                    object_half_size[0],
-                                    object_half_size[1],
-                                    element.font_id,
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    element.px, element.color
-                                );
-                                break;
+            if (object.z_order !== z_order)
+                continue;
+            switch (object.type) {
+                case iLGE_2D_Object_Type_Custom:
+                    if (!object.element.length)
+                        continue;
+                    z_order_find = true;
+                    if (this.#collision_detection(vcamera, object)) {
+                        let object_half_size = object.getHalfSize();
+                        camera.canvas_context.save();
+                        camera.canvas_context.translate(
+                            object.x + object_half_size[0],
+                            object.y + object_half_size[1]
+                        );
+                        camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
+                        for (let element of object.element) {
+                            if (!element.visible)
+                                continue;
+                            switch (element.type) {
+                                case iLGE_2D_Object_Element_Type_Rectangle:
+                                    camera.canvas_context.fillStyle = element.color;
+                                    camera.canvas_context.fillRect(
+                                        -object_half_size[0],
+                                        -object_half_size[1],
+                                        object.width,
+                                        object.height
+                                    );
+                                    break;
+                                case iLGE_2D_Object_Element_Type_Sprite:
+                                    camera.canvas_context.drawImage(
+                                        element.image,
+                                        element.src_x, element.src_y,
+                                        element.src_width, element.src_height,
+                                        -object_half_size[0],
+                                        -object_half_size[1],
+                                        object.width,
+                                        object.height
+                                    );
+                                    break;
+                                case iLGE_2D_Object_Element_Type_Text:
+                                    this.#drawText(
+                                        element.string, camera.canvas_context,
+                                        object_half_size[0],
+                                        object_half_size[1],
+                                        element.font_id,
+                                        -object_half_size[0],
+                                        -object_half_size[1],
+                                        element.px, element.color
+                                    );
+                                    break;
+                            }
                         }
+                        camera.canvas_context.restore();
                     }
-                    camera.canvas_context.restore();
-                }
+                    break;
             }
         }
         return z_order_find;
@@ -923,8 +911,8 @@ class iLGE_2D_Engine {
     /**
     * @param camera {iLGE_2D_Object}
     */
-    #draw_camera(camera, x, y, width, height) {
-        if (camera.type !== iLGE_2D_Object_Type_Camera && camera.allow_rendering)
+    #draw_camera(camera, object, x, y, width, height) {
+        if (camera.type !== iLGE_2D_Object_Type_Camera)
             return;
         if (!camera.canvas) {
             camera.canvas = document.createElement("canvas");
@@ -932,14 +920,18 @@ class iLGE_2D_Engine {
             camera.canvas_context = camera.canvas.getContext("2d");
             camera.canvas_context.imageSmoothingEnabled = false;
         }
-        let scale = Math.min(
-            this.canvas.width / camera.scale,
-            this.canvas.height / camera.scale
-        );
-        camera.width = this.canvas.width / scale;
-        camera.height = this.canvas.height / scale;
+        let scale = 1;
+        if (camera.scale > 0) {
+            scale = Math.min(
+                object.width / camera.scale,
+                object.height / camera.scale
+            );
+        }
+        camera.width = object.width / scale;
+        camera.height = object.height / scale;
         camera.canvas.width = Math.round(camera.width);
         camera.canvas.height = Math.round(camera.height);
+        camera.canvas_context.imageSmoothingEnabled = false;
         for (let element of camera.element) {
             if (!element.visible)
                 continue;
@@ -997,11 +989,7 @@ class iLGE_2D_Engine {
                 vcamera.width, vcamera.height
             );
         }
-        this.canvas_context.drawImage(
-            camera.canvas,
-            Math.round(x), Math.round(y),
-            Math.round(width), Math.round(height)
-        );
+        this.canvas_context.drawImage(camera.canvas, x, y, width, height);
     }
 
     #applyTransitionEffect(
@@ -1074,78 +1062,84 @@ class iLGE_2D_Engine {
     #draw_hud(z_order) {
         let z_order_find = false;
         for (let object of this.#objects_hud) {
-            if (object.type === iLGE_2D_Object_Type_Custom &&
-                object.element.length && object.z_order === z_order) {
-                z_order_find = true;
-                if (object.scale < 1)
-                    object.scale = this.canvas.width;
-                let object_scale = Math.min(
-                    this.canvas.width / object.scale,
-                    this.canvas.height / object.scale
-                );
-                let object_width = object.width * object_scale,
-                    object_height = object.height * object_scale;
-                object.scale_output = object_scale;
-                let object_half_size = [object_width / 2, object_height / 2];
-                this.canvas_context.save();
-                this.canvas_context.translate(
-                    object.x + object_half_size[0],
-                    object.y + object_half_size[1]
-                );
-                this.canvas_context.rotate((Math.PI / 180) * object.rotation);
-                for (let element of object.element) {
-                    if (!element.visible)
-                        continue;
-                    switch (element.type) {
-                        case iLGE_2D_Object_Element_Type_Rectangle:
-                            this.canvas_context.fillStyle = element.color;
-                            this.canvas_context.fillRect(
-                                -object_half_size[0],
-                                -object_half_size[1],
-                                object_width,
-                                object_height
-                            );
-                            break;
-                        case iLGE_2D_Object_Element_Type_Sprite:
-                            this.canvas_context.drawImage(
-                                element.image,
-                                element.src_x, element.src_y,
-                                element.src_width, element.src_height,
-                                -object_half_size[0],
-                                -object_half_size[1],
-                                object_width,
-                                object_height
-                            );
-                            break;
-                        case iLGE_2D_Object_Element_Type_Text:
-                            this.#drawText(
-                                element.string, this.canvas_context,
-                                object_half_size[0],
-                                object_half_size[1],
-                                element.font_id,
-                                -object_half_size[0],
-                                -object_half_size[1],
-                                element.px * object_scale, element.color
-                            );
-                            break;
+            if (object.z_order !== z_order)
+                continue;
+            switch (object.type) {
+                case iLGE_2D_Object_Type_Custom:
+                    if (!object.element.length)
+                        break;
+                    z_order_find = true;
+                    let object_scale = 1;
+                    if (object.scale > 0) {
+                        object_scale = Math.min(
+                            this.canvas.width / object.scale,
+                            this.canvas.height / object.scale
+                        );
                     }
-                }
-                this.canvas_context.restore();
+                    let object_width = object.width * object_scale,
+                        object_height = object.height * object_scale;
+                    object.scale_output = object_scale;
+                    let object_half_size = [object_width / 2, object_height / 2];
+                    this.canvas_context.save();
+                    this.canvas_context.translate(
+                        object.x + object_half_size[0],
+                        object.y + object_half_size[1]
+                    );
+                    this.canvas_context.rotate((Math.PI / 180) * object.rotation);
+                    for (let element of object.element) {
+                        if (!element.visible)
+                            continue;
+                        switch (element.type) {
+                            case iLGE_2D_Object_Element_Type_Rectangle:
+                                this.canvas_context.fillStyle = element.color;
+                                this.canvas_context.fillRect(
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    object_width,
+                                    object_height
+                                );
+                                break;
+                            case iLGE_2D_Object_Element_Type_Sprite:
+                                this.canvas_context.drawImage(
+                                    element.image,
+                                    element.src_x, element.src_y,
+                                    element.src_width, element.src_height,
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    object_width,
+                                    object_height
+                                );
+                                break;
+                            case iLGE_2D_Object_Element_Type_Text:
+                                this.#drawText(
+                                    element.string, this.canvas_context,
+                                    object_half_size[0],
+                                    object_half_size[1],
+                                    element.font_id,
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    element.px * object_scale, element.color
+                                );
+                                break;
+                            case iLGE_2D_Object_Element_Type_Camera_Viewer:
+                                this.#draw_camera(
+                                    element.camera, object,
+                                    -object_half_size[0],
+                                    -object_half_size[1],
+                                    object_width,
+                                    object_height,
+                                );
+                                break;
+                        }
+                    }
+                    this.canvas_context.restore();
+                    break;
             }
         }
         return z_order_find;
     }
 
     #draw() {
-        if (this.#selected_camera) {
-            if (this.#selected_camera.scale < 1)
-                this.#selected_camera.scale = this.canvas.width;
-            this.#draw_camera(
-                this.#selected_camera,
-                0, 0,
-                this.canvas.width, this.canvas.height
-            );
-        }
         let z_order_info = this.#getZOrderInfo(this.#objects_hud);
         for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
             this.#draw_hud(z_order);
@@ -1287,12 +1281,6 @@ class iLGE_2D_Engine {
         this.deltaTime = this.#time_diff / (1000 / 60);
         this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
         window.requestAnimationFrame(this.start);
-    }
-
-    setDefaultCamera(camera) {
-        if (camera.type !== iLGE_2D_Object_Type_Camera)
-            return;
-        this.#selected_camera = camera;
     }
 
     /**
