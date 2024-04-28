@@ -1324,6 +1324,8 @@ class iLGE_2D_Engine {
      * @param {this} isThis 
      * @param {TouchList} touches 
      * @param {Boolean} positive 
+     * @param {Boolean} movement
+     * @param {String} state 
      */
     #handle_touchlist_array(isThis, touches, positive, movement, state) {
         const sign = positive ? 1 : -1;
