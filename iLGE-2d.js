@@ -1402,6 +1402,8 @@ class iLGE_2D_Engine {
             case "cancel":
                 isThis.#handle_touchlist_array(isThis, touches, true, false, "Cancel/Leave");
                 isThis.#handle_touchlist_array(isThis, touches, false, false, "Cancel/Leave");
+                isThis.#handle_touchlist_array(isThis, touches, true, true, "Cancel/Leave");
+                isThis.#handle_touchlist_array(isThis, touches, false, true, "Cancel/Leave");
                 break;
             case "end":
                 isThis.#handle_touchlist_array(isThis, touches, true, false, "Up");
