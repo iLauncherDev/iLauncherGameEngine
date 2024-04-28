@@ -371,5 +371,5 @@ player.update_function = function (engine) {
     }
 }
 
-//game.addHudObject(camera_hud);
+game.addHudObject(camera_hud);
 game.start();

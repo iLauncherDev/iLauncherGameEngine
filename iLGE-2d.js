@@ -849,11 +849,9 @@ class iLGE_2D_Engine {
     #draw_camera_scene(camera, vcamera, z_order) {
         let z_order_find = false;
         for (let object of this.#objects) {
-            if (object.z_order !== z_order)
-                continue;
             switch (object.type) {
                 case iLGE_2D_Object_Type_Custom:
-                    if (!object.element.length)
+                    if (!object.element.length || object.z_order !== z_order)
                         continue;
                     z_order_find = true;
                     if (this.#collision_detection(vcamera, object)) {
@@ -910,7 +908,6 @@ class iLGE_2D_Engine {
     }
 
     #getZOrderInfo(array) {
-        return { min: 0, max: 1 };
         let min = Infinity, max = -Infinity;
         for (let object of array) {
             switch (object.type) {
@@ -952,7 +949,7 @@ class iLGE_2D_Engine {
         camera.height = object.height / scale;
         camera.canvas.width = Math.round(camera.width);
         camera.canvas.height = Math.round(camera.height);
-        camera.canvas_context.imageSmoothingEnabled = false;
+        //camera.canvas_context.imageSmoothingEnabled = false;
         for (let element of camera.element) {
             if (!element.visible)
                 continue;
