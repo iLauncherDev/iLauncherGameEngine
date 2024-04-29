@@ -1247,23 +1247,11 @@ class iLGE_2D_Engine {
         }
     }
 
-    start() {
-        if (!this.pointerLock) {
-            document.exitPointerLock();
-            this.canvas.style = "cursor: auto;";
-        }
-        else {
-            this.canvas.style = "cursor: none;";
-        }
-        if (this.#loaded_sources < this.#total_sources) {
-            window.requestAnimationFrame(this.start);
-            return;
-        }
-        this.#time_old = (new Date()).getTime();
-        this.#gamepad_handler(null, this, null);
-        let objects_with_collider_element = [];
-        let blocker_objects_with_collider_element = [];
-        for (let object of this.#objects) {
+    #objects_loop(
+        objects_with_collider_element, blocker_objects_with_collider_element,
+        array
+    ) {
+        for (let object of array) {
             object.old_x = object.x;
             object.old_y = object.y;
             if (object.start_function && object.reset) {
@@ -1273,7 +1261,7 @@ class iLGE_2D_Engine {
             if (object.update_function)
                 object.update_function(this);
         }
-        for (let object of this.#objects) {
+        for (let object of array) {
             switch (object.type) {
                 case iLGE_2D_Object_Type_Custom:
                     for (let element of object.element) {
@@ -1289,9 +1277,41 @@ class iLGE_2D_Engine {
                     break;
             }
         }
+    }
+
+    start() {
+        if (!this.pointerLock) {
+            document.exitPointerLock();
+            this.canvas.style = "cursor: auto;";
+        }
+        else {
+            this.canvas.style = "cursor: none;";
+        }
+        if (this.#loaded_sources < this.#total_sources) {
+            window.requestAnimationFrame(this.start);
+            return;
+        }
+        this.#time_old = (new Date()).getTime();
+        this.#gamepad_handler(null, this, null);
+        let objects_with_collider_element_scene = [],
+            objects_with_collider_element_hud = [];
+        let blocker_objects_with_collider_element_scene = [],
+            blocker_objects_with_collider_element_hud = [];
+        this.#objects_loop(
+            objects_with_collider_element_scene, blocker_objects_with_collider_element_scene,
+            this.#objects
+        );
+        this.#objects_loop(
+            objects_with_collider_element_hud, blocker_objects_with_collider_element_hud,
+            this.#objects_hud
+        );
         this.#check_collisions(
-            objects_with_collider_element,
-            blocker_objects_with_collider_element
+            objects_with_collider_element_scene,
+            blocker_objects_with_collider_element_scene
+        );
+        this.#check_collisions(
+            objects_with_collider_element_hud,
+            blocker_objects_with_collider_element_hud
         );
         this.#draw();
         this.#time_new = (new Date()).getTime();
