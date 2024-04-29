@@ -315,7 +315,8 @@ player.update_function = function (engine) {
         transition_toggle = false;
     }
     let Left = engine.control_map_get("MovementX", true) |
-        (engine.control_map_get("Right", true) - engine.control_map_get("Left", true));
+        (engine.control_map_get("Right", true) - engine.control_map_get("Left", true)
+    );
     let Up = engine.control_map_get("MovementY", true) | (
         engine.control_map_get("Down", true) - engine.control_map_get("Up", true)
     );
