@@ -1,3 +1,8 @@
+# 0.2.0
+    added class iLGE_2D_Scene
+    added scene variable in class iLGE_2D_Object for camera
+    removed #objects variable in class iLGE_2D_Engine
+
 # 0.1.16
     added touch events
     added movement for touch events

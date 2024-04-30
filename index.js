@@ -11,6 +11,9 @@ let game = new iLGE_2D_Engine(
     true
 );
 
+let scene = new iLGE_2D_Scene("MyScene", "scene", true);
+game.addObject(scene);
+
 game.title = "Eat The Walls!";
 
 let PDV437 = new iLGE_2D_Object_Font(
@@ -21,7 +24,7 @@ let PDV437 = new iLGE_2D_Object_Font(
 game.addObject(PDV437);
 
 let clang_audio = game.getSourceObject("clang.ogg");
-let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, 0, 0);
+let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, scene);
 let camera_hud = new iLGE_2D_Object("MyCameraHud", "camera_hud");
 camera_hud.addElement(
     new iLGE_2D_Object_Element_Camera_Viewer(
@@ -37,7 +40,7 @@ transition_effect.dither = new iLGE_2D_Object_Element_Sprite_Transition_Effect(
 );
 transition_effect.addElement(transition_effect.dither);
 
-let player = new iLGE_2D_Object("player", "player", iLGE_2D_Object_Type_Custom, 128, 128, 0, 1, 32, 64, 4, 8);
+let player = new iLGE_2D_Object("player", "player", iLGE_2D_Object_Type_Custom, 128, 128, 0, 1, 32, 64);
 
 player.addElement(
     new iLGE_2D_Object_Element_Rectangle("#0000ff", "wall", true)
@@ -47,15 +50,18 @@ let room_index = 0;
 let transition_toggle = false;
 
 function createRoom(wall_size, room_size, wall_speed, rotation_range) {
-    let wall_collider = new iLGE_2D_Object_Element_Collider(true, false, "wall_collder", 0, 0, wall_size, wall_size);
+    let wall_collider = new iLGE_2D_Object_Element_Collider(
+        true, false, "wall_collder", 0, 0, wall_size, wall_size
+    );
     for (let i = 0; i < room_size; i++) {
         for (let j = 0; j < room_size; j++) {
             if (i === 0 || i === room_size - 1 || j === 0 || j === room_size - 1) {
                 let wall = new iLGE_2D_Object(
                     "wall" + (room_index++), "wall", iLGE_2D_Object_Type_Custom,
                     wall_size * j, wall_size * i, Math.random() * rotation_range, 1,
-                    wall_size, wall_size, wall_speed, wall_speed
+                    wall_size, wall_size
                 );
+                wall.speed = wall_speed;
                 wall.update_function = function (engine) {
                     this.rotation += this.speed * engine.deltaTime;
                 };
@@ -65,7 +71,7 @@ function createRoom(wall_size, room_size, wall_speed, rotation_range) {
                 wall.addElement(
                     wall_collider
                 );
-                game.addObject(wall);
+                scene.addObject(wall);
             }
         }
     }
@@ -134,11 +140,11 @@ game.control_map_set_default("TouchMovementY", "Touch_MovementY_Positive");
 game.control_map_restore_default();
 game.control_map_save();
 
-game.addObject(player);
-game.addHudObject(transition_effect);
+scene.addObject(player);
+game.addObject(transition_effect);
 createRoom(128, 128, 0, 0);
 
-let total_walls = game.countObjectByClass("wall"), eated_walls = 0;
+let total_walls = scene.countObjectByClass("wall"), eated_walls = 0;
 
 /**
  * 
@@ -165,6 +171,8 @@ function DitherTransition(engine) {
  * @param {iLGE_2D_Engine} engine 
  */
 player.start_function = function (engine) {
+    this.min_speed = 4;
+    this.max_speed = 8;
     this.stamina_level = new iLGE_2D_Object(
         "hud0", null, iLGE_2D_Object_Type_Custom,
         0, 0, 0, 320, 9 * 4, 16
@@ -207,11 +215,11 @@ player.start_function = function (engine) {
         new iLGE_2D_Object_Element_Rectangle("#ff0000", "wall", true)
     );
     this.cursor.z_order = 1;
-    engine.addHudObject(this.cursor);
-    engine.addHudObject(this.game_title);
-    engine.addHudObject(this.stamina_level);
-    engine.addHudObject(this.stamina_hud_red);
-    engine.addHudObject(this.stamina_hud_green);
+    engine.addObject(this.cursor);
+    engine.addObject(this.game_title);
+    engine.addObject(this.stamina_level);
+    engine.addObject(this.stamina_hud_red);
+    engine.addObject(this.stamina_hud_green);
     this.collider = new iLGE_2D_Object_Element_Collider(
         false, false, this.id + "_collder",
         0, 0, this.width, this.height);
@@ -314,8 +322,8 @@ player.update_function = function (engine) {
     else {
         transition_toggle = false;
     }
-    let Left = engine.control_map_get("MovementX", true) |
-        (engine.control_map_get("Right", true) - engine.control_map_get("Left", true)
+    let Left = engine.control_map_get("MovementX", true) | (
+        engine.control_map_get("Right", true) - engine.control_map_get("Left", true)
     );
     let Up = engine.control_map_get("MovementY", true) | (
         engine.control_map_get("Down", true) - engine.control_map_get("Up", true)
@@ -365,12 +373,12 @@ player.update_function = function (engine) {
     if (engine.control_map_get("Interact", true)) {
         collided_wall = this.collider.collidedWithByClass("wall");
         if (collided_wall) {
-            engine.removeObject(collided_wall.id);
+            this.scene.removeObject(collided_wall.id);
             clang_audio.cloneIt().playAudio();
             eated_walls++;
         }
     }
 }
 
-game.addHudObject(camera_hud);
+game.addObject(camera_hud);
 game.start();

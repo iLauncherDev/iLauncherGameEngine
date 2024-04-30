@@ -13,6 +13,7 @@ const iLGE_2D_Object_Element_Type_Sprite_Transition_Effect = "Sprite_Transition_
 const __iLGE_2D_Object_Font = "Font";
 const iLGE_2D_Object_Type_Camera = "Camera";
 const iLGE_2D_Object_Type_Custom = "Custom";
+const iLGE_2D_Object_Type_Scene = "Scene";
 const iLGE_2D_Source_Type_Image = "Image_Source";
 const iLGE_2D_Source_Type_Audio = "Audio_Source";
 
@@ -280,8 +281,141 @@ class iLGE_2D_Object_Element_Sprite_Transition_Effect {
     }
 }
 
+class iLGE_2D_Scene {
+    id = "SCENEID";
+    class_id = "CLASS";
+    enabled = true;
+    type = iLGE_2D_Object_Type_Scene;
+    objects = [];
+
+    /**
+     * 
+     * @param {Array} array 
+     * @returns {Array}
+     */
+    #clone_array(array) {
+        let copy = [];
+        for (let i = 0; i < array.length; i++)
+            copy[i] = Object.assign({}, array[i]);
+        return copy;
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     * @param {String} id 
+     */
+    #smartFind(array, id) {
+        for (let i = array.length - 1; i >= 0; i--) {
+            let array_object = array[i];
+            if (array_object.id === id) {
+                return array_object;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {Array} array1 
+     * @param {Array} array2 
+     */
+    #smartClean(array1, array2) {
+        for (let i = array1.length - 1; i >= 0; i--) {
+            if (!this.#smartFind(array2, array1[i].id)) {
+                array1.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     * @param {*} object 
+     */
+    #smartPush(array, object) {
+        for (let i = array.length - 1; i >= 0; i--) {
+            let array_object = array[i];
+            if (object === array_object) {
+                return;
+            }
+        }
+        array.push(object);
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     * @param {*} object 
+     */
+    #smartPop(array, object) {
+        for (let i = array.length - 1; i >= 0; i--) {
+            let array_object = array[i];
+            if (object === array_object) {
+                array.splice(i, 1);
+                return;
+            }
+        }
+    }
+
+    /**
+    * 
+    * @param {String} class_id
+    * @returns {Number}
+    */
+    countObjectByClass(class_id) {
+        let number = 0;
+        for (let array_object of this.objects) {
+            if (array_object.class_id === class_id) {
+                number++;
+            }
+        }
+        return number;
+    }
+
+    /**
+     * 
+     * @param {String} id
+     * @returns {iLGE_2D_Object}
+     */
+    findObject(id) {
+        return this.#smartFind(this.objects, id);
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} object 
+     */
+    addObject(object) {
+        if (typeof object !== "object")
+            return;
+        this.#smartPush(this.objects, object);
+    }
+
+    removeObject(id) {
+        this.#smartPop(this.objects, this.#smartFind(this.objects, id));
+        for (let object of this.objects) {
+            if (object.type === iLGE_2D_Object_Type_Custom) {
+                for (let element of object.element) {
+                    if (element.type === iLGE_2D_Object_Element_Type_Collider) {
+                        this.#smartClean(element.collided_objects, this.objects);
+                    }
+                }
+            }
+        }
+    }
+
+    constructor(id = "SCENEID", class_id = "CLASS", enabled = true) {
+        this.id = id;
+        this.class_id = class_id;
+        this.enabled = enabled;
+    }
+}
+
 class iLGE_2D_Object {
     id = "OBJID";
+    class_id = "CLASS";
+    scene = 0;
 
     x = 0;
     y = 0;
@@ -419,7 +553,7 @@ class iLGE_2D_Object {
     constructor(
         id = "OBJID", class_id = "CLASS", type = iLGE_2D_Object_Type_Custom,
         x = 0, y = 0, rotation = 0, scale = 0,
-        width = 0, height = 0, min_speed = 0, max_speed = 0) {
+        width = 0, height = 0, scene = null) {
         this.id = id;
         this.class_id = class_id;
         this.type = type;
@@ -433,9 +567,7 @@ class iLGE_2D_Object {
         this.scale = scale;
         this.width = width;
         this.height = height;
-        this.min_speed = min_speed;
-        this.speed = min_speed;
-        this.max_speed = max_speed;
+        this.scene = scene;
     }
 }
 
@@ -448,9 +580,6 @@ class iLGE_2D_Engine {
 
     /* Game Objects */
     #objects = [];
-
-    /* Hud Objects */
-    #objects_hud = [];
 
     /* Controls Interrupts Value Array */
     #controls = {};
@@ -475,6 +604,11 @@ class iLGE_2D_Engine {
     #gamepad_button_string = "_Button_";
     #gamepad_axis_string = "_Axis_";
 
+    /**
+     * 
+     * @param {Array} array 
+     * @returns {Array}
+     */
     #clone_array(array) {
         let copy = [];
         for (let i = 0; i < array.length; i++)
@@ -556,36 +690,12 @@ class iLGE_2D_Engine {
     }
 
     /**
-    * 
-    * @param {String} class_id
-    * @returns {Number}
-    */
-    countHudObjectByClass(class_id) {
-        let number = 0;
-        for (let array_object of this.#objects) {
-            if (array_object.class_id === class_id) {
-                number++;
-            }
-        }
-        return number;
-    }
-
-    /**
      * 
      * @param {String} id
      * @returns {iLGE_2D_Object}
      */
     findObject(id) {
         return this.#smartFind(this.#objects, id);
-    }
-
-    /**
-     * 
-     * @param {String} id
-     * @returns {iLGE_2D_Object}
-     */
-    findHudObject(id) {
-        return this.#smartFind(this.#objects_hud, id);
     }
 
     /**
@@ -598,16 +708,6 @@ class iLGE_2D_Engine {
         this.#smartPush(this.#objects, object);
     }
 
-    /**
-     * 
-     * @param {iLGE_2D_Object} object 
-     */
-    addHudObject(object) {
-        if (typeof object !== "object")
-            return;
-        this.#smartPush(this.#objects_hud, object);
-    }
-
     removeObject(id) {
         this.#smartPop(this.#objects, this.#smartFind(this.#objects, id));
         for (let object of this.#objects) {
@@ -615,19 +715,6 @@ class iLGE_2D_Engine {
                 for (let element of object.element) {
                     if (element.type === iLGE_2D_Object_Element_Type_Collider) {
                         this.#smartClean(element.collided_objects, this.#objects);
-                    }
-                }
-            }
-        }
-    }
-
-    removeHudObject(id) {
-        this.#smartPop(this.#objects_hud, this.#smartFind(this.#objects_hud, id));
-        for (let object of this.#objects_hud) {
-            if (object.type === iLGE_2D_Object_Type_Custom) {
-                for (let element of object.element) {
-                    if (element.type === iLGE_2D_Object_Element_Type_Collider) {
-                        this.#smartClean(element.collided_objects, this.#objects_hud);
                     }
                 }
             }
@@ -848,7 +935,7 @@ class iLGE_2D_Engine {
 
     #draw_camera_scene(camera, vcamera, z_order) {
         let z_order_find = false;
-        for (let object of this.#objects) {
+        for (let object of camera.scene.objects) {
             switch (object.type) {
                 case iLGE_2D_Object_Type_Custom:
                     if (!object.element.length || object.z_order !== z_order)
@@ -930,7 +1017,7 @@ class iLGE_2D_Engine {
     * @param camera {iLGE_2D_Object}
     */
     #draw_camera(camera, object, x, y, width, height) {
-        if (camera.type !== iLGE_2D_Object_Type_Camera)
+        if (!camera || camera.type !== iLGE_2D_Object_Type_Camera || !camera.scene)
             return;
         if (!camera.canvas) {
             camera.canvas = document.createElement("canvas");
@@ -995,7 +1082,7 @@ class iLGE_2D_Engine {
             -camera.x - halfSize[0],
             -camera.y - halfSize[1]
         );
-        let z_order_info = this.#getZOrderInfo(this.#objects);
+        let z_order_info = this.#getZOrderInfo(camera.scene.objects);
         for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
             this.#draw_camera_scene(camera, vcamera, z_order);
         }
@@ -1079,7 +1166,7 @@ class iLGE_2D_Engine {
 
     #draw_hud(z_order) {
         let z_order_find = false;
-        for (let object of this.#objects_hud) {
+        for (let object of this.#objects) {
             if (object.z_order !== z_order)
                 continue;
             switch (object.type) {
@@ -1158,11 +1245,11 @@ class iLGE_2D_Engine {
     }
 
     #draw() {
-        let z_order_info = this.#getZOrderInfo(this.#objects_hud);
+        let z_order_info = this.#getZOrderInfo(this.#objects);
         for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
             this.#draw_hud(z_order);
         }
-        for (let object of this.#objects_hud) {
+        for (let object of this.#objects) {
             if (object.type === iLGE_2D_Object_Type_Custom && object.element.length) {
                 this.canvas_context.save();
                 for (let element of object.element) {
@@ -1249,9 +1336,10 @@ class iLGE_2D_Engine {
 
     #objects_loop(
         objects_with_collider_element, blocker_objects_with_collider_element,
-        array
+        array, scene = this
     ) {
         for (let object of array) {
+            object.scene = scene;
             object.old_x = object.x;
             object.old_y = object.y;
             if (object.start_function && object.reset) {
@@ -1293,25 +1381,30 @@ class iLGE_2D_Engine {
         }
         this.#time_old = (new Date()).getTime();
         this.#gamepad_handler(null, this, null);
-        let objects_with_collider_element_scene = [],
-            objects_with_collider_element_hud = [];
-        let blocker_objects_with_collider_element_scene = [],
-            blocker_objects_with_collider_element_hud = [];
+        let objects_with_collider_element = [];
+        let blocker_objects_with_collider_element = [];
+        for (let object of this.#objects) {
+            if (object.type === iLGE_2D_Object_Type_Scene && object.enabled) {
+                let objects_with_collider_element_scene = [];
+                let blocker_objects_with_collider_element_scene = [];
+                this.#objects_loop(
+                    objects_with_collider_element_scene,
+                    blocker_objects_with_collider_element_scene,
+                    object.objects, object
+                );
+                this.#check_collisions(
+                    objects_with_collider_element_scene,
+                    blocker_objects_with_collider_element_scene
+                );
+            }
+        }
         this.#objects_loop(
-            objects_with_collider_element_scene, blocker_objects_with_collider_element_scene,
+            objects_with_collider_element, blocker_objects_with_collider_element,
             this.#objects
         );
-        this.#objects_loop(
-            objects_with_collider_element_hud, blocker_objects_with_collider_element_hud,
-            this.#objects_hud
-        );
         this.#check_collisions(
-            objects_with_collider_element_scene,
-            blocker_objects_with_collider_element_scene
-        );
-        this.#check_collisions(
-            objects_with_collider_element_hud,
-            blocker_objects_with_collider_element_hud
+            objects_with_collider_element,
+            blocker_objects_with_collider_element
         );
         this.#draw();
         this.#time_new = (new Date()).getTime();
