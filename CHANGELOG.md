@@ -1,3 +1,6 @@
+# 0.2.3
+    added priority variable in iLGE_2D_Object class
+
 # 0.2.2
     fixed a small bug in #check_collisions function inside iLGE_2D_Engine class
 

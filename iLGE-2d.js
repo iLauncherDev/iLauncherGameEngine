@@ -407,6 +407,7 @@ class iLGE_2D_Object {
     id = "OBJID";
     class_id = "CLASS";
     scene = 0;
+    priority = 0;
 
     x = 0;
     y = 0;
@@ -1003,6 +1004,25 @@ class iLGE_2D_Engine {
             max: max,
         };
     }
+        
+    #getPriorityInfo(array) {
+        let min = Infinity, max = -Infinity;
+        for (let object of array) {
+            switch (object.type) {
+                case iLGE_2D_Object_Type_Custom:
+                case iLGE_2D_Object_Type_Camera:
+                    if (object.priority > max)
+                        max = object.priority;
+                    if (object.priority < min)
+                        min = object.priority;
+                    break;
+            }
+        }
+        return {
+            min: min,
+            max: max,
+        };
+    }
 
     /**
     * @param camera {iLGE_2D_Object}
@@ -1332,16 +1352,21 @@ class iLGE_2D_Engine {
         objects_with_collider_element, blocker_objects_with_collider_element,
         array, scene = this
     ) {
-        for (let object of array) {
-            object.scene = scene;
-            object.old_x = object.x;
-            object.old_y = object.y;
-            if (object.start_function && object.reset) {
-                object.start_function(this);
-                object.reset = false;
+        let priority = this.#getPriorityInfo(array);
+        for (let p = priority.max; p >= priority.min; p--) {
+            for (let object of array) {
+                if (object.priority !== p)
+                    continue;
+                object.scene = scene;
+                object.old_x = object.x;
+                object.old_y = object.y;
+                if (object.start_function && object.reset) {
+                    object.start_function(this);
+                    object.reset = false;
+                }
+                if (object.update_function)
+                    object.update_function(this);
             }
-            if (object.update_function)
-                object.update_function(this);
         }
         for (let object of array) {
             switch (object.type) {
