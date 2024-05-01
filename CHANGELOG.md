@@ -1,3 +1,6 @@
+# 0.2.2
+    fixed a small bug in #check_collisions function inside iLGE_2D_Engine class
+
 # 0.2.1
     rename #getRotationDirection to #getRotationVector in class iLGE_2D_Object
 

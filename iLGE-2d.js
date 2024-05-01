@@ -1266,6 +1266,9 @@ class iLGE_2D_Engine {
         objects_with_collider_element,
         blocker_objects_with_collider_element
     ) {
+        let array = blocker_objects_with_collider_element;
+        if (!array.length)
+            array = objects_with_collider_element;
         for (let object1 of objects_with_collider_element) {
             for (let element1 of object1.element) {
                 if (element1.type === iLGE_2D_Object_Element_Type_Collider) {
@@ -1276,7 +1279,7 @@ class iLGE_2D_Engine {
                         element1.width, element1.height,
                     );
                     tmp_object1.prepareForCollision();
-                    for (let object2 of blocker_objects_with_collider_element) {
+                    for (let object2 of array) {
                         if (object1 === object2)
                             continue;
                         for (let element2 of object2.element) {
