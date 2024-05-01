@@ -1,3 +1,6 @@
+# 0.2.1
+    rename #getRotationDirection to #getRotationVector in class iLGE_2D_Object
+
 # 0.2.0
     added class iLGE_2D_Scene
     added scene variable in class iLGE_2D_Object for camera

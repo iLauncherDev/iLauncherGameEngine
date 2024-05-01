@@ -329,16 +329,16 @@ player.update_function = function (engine) {
         engine.control_map_get("Down", true) - engine.control_map_get("Up", true)
     );
     let run = engine.control_map_get("RUN", true);
-    let vector_movement = new iLGE_2D_Vector2();
     let collided_wall = null;
     this.rotation +=
         (movementX * this.mouse_sensitivity -
             engine.control_map_get("MovementX1", false) * this.gamepad_sensitivity * engine.deltaTime);
-    vector_movement.x = Left * this.speed * engine.deltaTime;
-    vector_movement.y = Up * this.speed * engine.deltaTime;
-    vector_movement = vector_movement.transform(this.getRotationDirection());
-    this.x += vector_movement.x;
-    this.y += vector_movement.y;
+    let vector_movement = (new iLGE_2D_Vector2(
+        Left,
+        Up
+    )).transform(this.getRotationVector()).normalize();
+    this.x += vector_movement.x * this.speed * engine.deltaTime;
+    this.y += vector_movement.y * this.speed * engine.deltaTime;
     if (run && this.stamina > 0) {
         this.speed = this.max_speed;
         if (vector_movement.x || vector_movement.y)

@@ -112,13 +112,13 @@ class iLGE_2D_Vector2 {
 
     sum(vector) {
         if (!vector)
-            return new iLGE_2D_Vector2(this.x, this.y);
+            return this;
         return new iLGE_2D_Vector2(this.x + vector.x, this.y + vector.y);
     }
 
     subtract(vector) {
         if (!vector)
-            return new iLGE_2D_Vector2(this.x, this.y);
+            return this;
         return new iLGE_2D_Vector2(this.x - vector.x, this.y - vector.y);
     }
 
@@ -129,26 +129,17 @@ class iLGE_2D_Vector2 {
     normalize() {
         let magnitude = this.magnitude();
         if (!magnitude)
-            return new iLGE_2D_Vector2(this.x, this.y);
+            return this;
         return new iLGE_2D_Vector2(this.x / magnitude, this.y / magnitude);
     }
 
-    transform(vector_or_number) {
-        switch (typeof vector_or_number) {
-            case "object":
-                return new iLGE_2D_Vector2(
-                    vector_or_number.x * this.x - vector_or_number.y * this.y,
-                    vector_or_number.y * this.x + vector_or_number.x * this.y
-                );
-            case "number":
-                let cos = Math.cos(vector_or_number),
-                    sin = Math.sin(vector_or_number);
-                return new iLGE_2D_Vector2(
-                    cos * this.x - sin * this.y,
-                    sin * this.x + cos * this.y
-                );
-        }
-        return null;
+    transform(vector) {
+        if (!vector)
+            return this;
+        return new iLGE_2D_Vector2(
+            vector.x * this.x - vector.y * this.y,
+            vector.y * this.x + vector.x * this.y
+        );
     }
 
     constructor(x = 0, y = 0) {
@@ -519,7 +510,7 @@ class iLGE_2D_Object {
             ];
     }
 
-    getRotationDirection(object = this) {
+    getRotationVector(object = this) {
         let radians = (Math.PI / 180) * object.rotation;
         let x = Math.cos(radians), y = Math.sin(radians);
         return new iLGE_2D_Vector2(x, y);
