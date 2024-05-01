@@ -1284,66 +1284,61 @@ class iLGE_2D_Engine {
 
     #check_collisions(
         objects_with_collider_element,
-        blocker_objects_with_collider_element,
-        priority
+        blocker_objects_with_collider_element
     ) {
         let array = blocker_objects_with_collider_element;
         if (!array.length)
             array = objects_with_collider_element;
-        for (let p = priority.max; p >= priority.min; p--) {
-            for (let object1 of objects_with_collider_element) {
-                if (object1.priority !== p)
-                    continue;
-                for (let element1 of object1.element) {
-                    if (element1.type === iLGE_2D_Object_Element_Type_Collider) {
-                        let tmp_object1 = new iLGE_2D_Object(
-                            null, null, iLGE_2D_Object_Type_Custom,
-                            object1.x + element1.x, object1.y + element1.y,
-                            object1.rotation, object1.scale,
-                            element1.width, element1.height,
-                        );
-                        tmp_object1.prepareForCollision();
-                        for (let object2 of array) {
-                            if (object1 === object2)
-                                continue;
-                            for (let element2 of object2.element) {
-                                if (element2.type === iLGE_2D_Object_Element_Type_Collider) {
-                                    let tmp_object2 = new iLGE_2D_Object(
-                                        null, null, iLGE_2D_Object_Type_Custom,
-                                        object2.x + element2.x, object2.y + element2.y,
-                                        object2.rotation, object2.scale,
-                                        element2.width, element2.height,
-                                    );
-                                    tmp_object2.prepareForCollision();
-                                    if (this.#collision_detection(tmp_object1, tmp_object2)) {
-                                        if (!element1.blocker && !element1.noclip && element2.blocker) {
-                                            object1.x = object1.old_x;
-                                            object1.y = object1.old_y;
-                                            let overlapX = this.#getOverlapX(
-                                                tmp_object1.vertices,
-                                                tmp_object2.vertices
-                                            );
-                                            let overlapY = this.#getOverlapY(
-                                                tmp_object1.vertices,
-                                                tmp_object2.vertices
-                                            );
-                                            if (overlapX < overlapY) {
-                                                let directionX = (tmp_object1.x < tmp_object2.x) ? -1 : 1;
-                                                object1.x += overlapX * directionX;
-                                            } else {
-                                                let directionY = (tmp_object1.y < tmp_object2.y) ? -1 : 1;
-                                                object1.y += overlapY * directionY;
-                                            }
-                                            object1.new_x = object1.x;
-                                            object1.new_y = object1.y;
+        for (let object1 of objects_with_collider_element) {
+            for (let element1 of object1.element) {
+                if (element1.type === iLGE_2D_Object_Element_Type_Collider) {
+                    let tmp_object1 = new iLGE_2D_Object(
+                        null, null, iLGE_2D_Object_Type_Custom,
+                        object1.x + element1.x, object1.y + element1.y,
+                        object1.rotation, object1.scale,
+                        element1.width, element1.height,
+                    );
+                    tmp_object1.prepareForCollision();
+                    for (let object2 of array) {
+                        if (object1 === object2)
+                            continue;
+                        for (let element2 of object2.element) {
+                            if (element2.type === iLGE_2D_Object_Element_Type_Collider) {
+                                let tmp_object2 = new iLGE_2D_Object(
+                                    null, null, iLGE_2D_Object_Type_Custom,
+                                    object2.x + element2.x, object2.y + element2.y,
+                                    object2.rotation, object2.scale,
+                                    element2.width, element2.height,
+                                );
+                                tmp_object2.prepareForCollision();
+                                if (this.#collision_detection(tmp_object1, tmp_object2)) {
+                                    if (!element1.blocker && !element1.noclip && element2.blocker) {
+                                        object1.x = object1.old_x;
+                                        object1.y = object1.old_y;
+                                        let overlapX = this.#getOverlapX(
+                                            tmp_object1.vertices,
+                                            tmp_object2.vertices
+                                        );
+                                        let overlapY = this.#getOverlapY(
+                                            tmp_object1.vertices,
+                                            tmp_object2.vertices
+                                        );
+                                        if (overlapX < overlapY) {
+                                            let directionX = (tmp_object1.x < tmp_object2.x) ? -1 : 1;
+                                            object1.x += overlapX * directionX;
+                                        } else {
+                                            let directionY = (tmp_object1.y < tmp_object2.y) ? -1 : 1;
+                                            object1.y += overlapY * directionY;
                                         }
-                                        this.#smartPush(element1.collided_objects, object2);
-                                        this.#smartPush(element2.collided_objects, object1);
+                                        object1.new_x = object1.x;
+                                        object1.new_y = object1.y;
                                     }
-                                    else {
-                                        this.#smartPop(element1.collided_objects, object2);
-                                        this.#smartPop(element2.collided_objects, object1);
-                                    }
+                                    this.#smartPush(element1.collided_objects, object2);
+                                    this.#smartPush(element2.collided_objects, object1);
+                                }
+                                else {
+                                    this.#smartPop(element1.collided_objects, object2);
+                                    this.#smartPop(element2.collided_objects, object1);
                                 }
                             }
                         }
@@ -1370,22 +1365,20 @@ class iLGE_2D_Engine {
                 }
                 if (object.update_function)
                     object.update_function(this);
-            }
-        }
-        for (let object of array) {
-            switch (object.type) {
-                case iLGE_2D_Object_Type_Custom:
-                    for (let element of object.element) {
-                        if (element.type === iLGE_2D_Object_Element_Type_Collider) {
-                            if (element.blocker)
-                                this.#smartPush(blocker_objects_with_collider_element, object);
-                            else
-                                this.#smartPush(objects_with_collider_element, object);
-                            break;
+                switch (object.type) {
+                    case iLGE_2D_Object_Type_Custom:
+                        for (let element of object.element) {
+                            if (element.type === iLGE_2D_Object_Element_Type_Collider) {
+                                if (element.blocker)
+                                    this.#smartPush(blocker_objects_with_collider_element, object);
+                                else
+                                    this.#smartPush(objects_with_collider_element, object);
+                                break;
+                            }
                         }
-                    }
-                    object.prepareForCollision();
-                    break;
+                        object.prepareForCollision();
+                        break;
+                }
             }
         }
     }
@@ -1419,8 +1412,7 @@ class iLGE_2D_Engine {
                 );
                 this.#check_collisions(
                     objects_with_collider_element_scene,
-                    blocker_objects_with_collider_element_scene,
-                    priority
+                    blocker_objects_with_collider_element_scene
                 );
             }
         }
@@ -1432,8 +1424,7 @@ class iLGE_2D_Engine {
         );
         this.#check_collisions(
             objects_with_collider_element,
-            blocker_objects_with_collider_element,
-            priority
+            blocker_objects_with_collider_element
         );
         this.#draw();
         this.#time_new = (new Date()).getTime();
