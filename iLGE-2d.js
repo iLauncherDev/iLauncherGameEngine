@@ -10,7 +10,7 @@ const iLGE_2D_Object_Element_Type_Collider = "Collider";
 const iLGE_2D_Object_Element_Type_Text = "Text";
 const iLGE_2D_Object_Element_Type_Camera_Viewer = "Camera_Viewer";
 const iLGE_2D_Object_Element_Type_Sprite_Transition_Effect = "Sprite_Transition_Effect";
-const __iLGE_2D_Object_Font = "Font";
+const iLGE_2D_Object_Type_Font = "Font";
 const iLGE_2D_Object_Type_Camera = "Camera";
 const iLGE_2D_Object_Type_Custom = "Custom";
 const iLGE_2D_Object_Type_Scene = "Scene";
@@ -80,7 +80,8 @@ class iLGE_2D_Source {
 class iLGE_2D_Object_Font {
     image = 0;
     id = 0;
-    type = __iLGE_2D_Object_Font;
+    type = iLGE_2D_Object_Type_Font;
+    width_array = [];
     width = 0;
     height = 0;
     map = {};
@@ -92,17 +93,30 @@ class iLGE_2D_Object_Font {
         this.canvas = document.createElement("canvas");
         this.canvas.style = "background-color: transparent;";
         this.canvas.id = id;
-        this.canvas.width = fontwidth;
-        this.canvas.height = fontheight;
         this.canvas_context = this.canvas.getContext("2d");
         this.image = image_object;
         this.id = id;
-        this.width = fontwidth;
+        switch (typeof fontwidth) {
+            case "object":
+                for (let i = 0; i < fontmap.length; i++) {
+                    let char = fontmap.charAt(i);
+                    this.width_array[char] = fontwidth[i];
+                }
+                break;
+            case "number":
+                for (let i = 0; i < fontmap.length; i++) {
+                    let char = fontmap.charAt(i);
+                    this.width_array[char] = fontwidth;
+                }
+                break;
+        }
         this.height = fontheight;
         this.map = [];
+        let offset_x = 0;
         for (let i = 0; i < fontmap.length; i++) {
             let char = fontmap.charAt(i);
-            this.map[char] = [this.width * i, 0];
+            this.map[char] = [offset_x, 0];
+            offset_x += this.width_array[char];
         }
     }
 }
@@ -867,7 +881,7 @@ class iLGE_2D_Engine {
     #find_font(font_id) {
         for (let i = 0; i < this.#objects.length; i++) {
             if (this.#objects[i].id === font_id &&
-                this.#objects[i].type === __iLGE_2D_Object_Font) {
+                this.#objects[i].type === iLGE_2D_Object_Type_Font) {
                 return this.#objects[i];
             }
         }
@@ -881,7 +895,6 @@ class iLGE_2D_Engine {
         if (!font_object)
             return;
         const font_scale = font_object.height / px;
-        const font_width = Math.round(font_object.width / font_scale);
         const font_height = Math.round(font_object.height / font_scale);
         if (y + px > max_height)
             return;
@@ -894,10 +907,10 @@ class iLGE_2D_Engine {
                     font_x_pos = 0;
                     font_y_pos += font_height;
                     continue;
-                case ' ':
-                    font_x_pos += font_width;
-                    continue;
             }
+            if (!font_object.width_array[char] || !font_object.map[char])
+                continue;
+            const font_width = Math.round(font_object.width_array[char] / font_scale);
             if (x + font_x_pos >= max_width) {
                 font_x_pos = 0;
                 font_y_pos += font_height;
@@ -910,7 +923,7 @@ class iLGE_2D_Engine {
             font_object.canvas_context.drawImage(
                 font_object.image,
                 font_object.map[char][0], font_object.map[char][1],
-                font_object.width, font_object.height,
+                font_object.width_array[char], font_object.height,
                 0, 0,
                 font_width, font_height);
             font_object.canvas_context.globalCompositeOperation = "source-in";

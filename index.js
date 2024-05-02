@@ -3,6 +3,7 @@ let game = new iLGE_2D_Engine(
     [
         "CursorSprite.png",
         "PDV437.png",
+        "PRO_ATLAS.png",
         "DitherSprites.png",
         "clang.ogg"
     ],
@@ -16,11 +17,32 @@ game.addObject(scene);
 
 game.title = "Eat The Walls!";
 
-let PDV437 = new iLGE_2D_Object_Font(
-    game.getSourceObject("PDV437.png"), "PDV437", 9, 16,
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[]"
+let PRO_ATLAS = new iLGE_2D_Object_Font(
+    game.getSourceObject("PRO_ATLAS.png"), "PRO_ATLAS",
+    [
+        34, 17, 30, 30, 34, 32, 32, 34, 30,
+        32, 30, 30, 27, 30, 30, 27, 27,
+        27, 7, 22, 30, 7, 37, 27, 27,
+        27, 27, 25, 25, 27, 27, 30, 39,
+        34, 32, 30, 37, 30, 34, 34, 34,
+        27, 39, 39, 32, 37, 32, 32, 52,
+        42, 44, 30, 52, 34, 37, 39, 39,
+        37, 59, 42, 37, 39, 7, 12, 44,
+        10, 30, 30, 20, 17, 39, 27, 22,
+        25, 12, 12, 27, 7, 17, 7, 49,
+        52, 30, 27, 39, 22, 22, 17, 17, 24,
+    ],
+    72,
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[] "
 );
 
+let PDV437 = new iLGE_2D_Object_Font(
+    game.getSourceObject("PDV437.png"), "PDV437",
+    9,
+    16,
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[] "
+);
+game.addObject(PRO_ATLAS);
 game.addObject(PDV437);
 
 let clang_audio = game.getSourceObject("clang.ogg");
@@ -293,7 +315,7 @@ player.update_function = function (engine) {
         - 4 * this.stamina_hud_red.scale_output;
     this.stamina_hud_green.y = this.stamina_hud_red.y;
     this.stamina_level.element[0].string = Math.floor(stamina * 100) + "%";
-    this.stamina_level.width = this.stamina_level.element[0].string.length * PDV437.width;
+    this.stamina_level.width = this.stamina_level.element[0].string.length * 9;
     this.stamina_level.y =
         this.stamina_hud_red.y - this.stamina_level.height * this.stamina_level.scale_output;
     this.stamina_level.x =

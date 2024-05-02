@@ -1,3 +1,6 @@
+# 0.2.4
+    fonts that do not have a fixed width are now supported
+
 # 0.2.3
     added priority variable in iLGE_2D_Object class
 

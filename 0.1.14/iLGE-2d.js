@@ -9,7 +9,7 @@ const iLGE_2D_Object_Element_Type_Rectangle = "Rectangle";
 const iLGE_2D_Object_Element_Type_Collider = "Collider";
 const iLGE_2D_Object_Element_Type_Text = "Text";
 const iLGE_2D_Object_Element_Type_Sprite_Transition_Effect = "Sprite_Transition_Effect";
-const __iLGE_2D_Object_Font = "Font";
+const iLGE_2D_Object_Type_Font = "Font";
 const iLGE_2D_Object_Type_Camera = "Camera";
 const iLGE_2D_Object_Type_Custom = "Custom";
 const iLGE_2D_Source_Type_Image = "Image_Source";
@@ -78,7 +78,7 @@ class iLGE_2D_Source {
 class iLGE_2D_Object_Font {
     image = 0;
     id = 0;
-    type = __iLGE_2D_Object_Font;
+    type = iLGE_2D_Object_Type_Font;
     width = 0;
     height = 0;
     map = {};
@@ -785,7 +785,7 @@ class iLGE_2D_Engine {
     #find_font(font_id) {
         for (let i = 0; i < this.#objects.length; i++) {
             if (this.#objects[i].id === font_id &&
-                this.#objects[i].type === __iLGE_2D_Object_Font) {
+                this.#objects[i].type === iLGE_2D_Object_Type_Font) {
                 return this.#objects[i];
             }
         }
