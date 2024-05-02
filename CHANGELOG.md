@@ -1,3 +1,6 @@
+# 0.2.5
+    add support for RAW files
+
 # 0.2.4
     fonts that do not have a fixed width are now supported
 

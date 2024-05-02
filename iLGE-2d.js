@@ -16,6 +16,7 @@ const iLGE_2D_Object_Type_Custom = "Custom";
 const iLGE_2D_Object_Type_Scene = "Scene";
 const iLGE_2D_Source_Type_Image = "Image_Source";
 const iLGE_2D_Source_Type_Audio = "Audio_Source";
+const iLGE_2D_Source_Type_RAW = "RAW_Source";
 
 class iLGE_2D_Source {
     source = 0;
@@ -1743,7 +1744,7 @@ class iLGE_2D_Engine {
      * @param {String} src 
      * @returns {iLGE_2D_Source}
      */
-    getSourceObject(src) {
+    findSourceObject(src) {
         for (let i = 0; i < this.#source.length; i++) {
             if (this.#source[i].compareSrc(src)) {
                 return this.#source[i];
@@ -1773,6 +1774,8 @@ class iLGE_2D_Engine {
         isThis.#total_sources = source_files.length;
         for (let i = 0; i < source_files.length; i++) {
             let source_url = source_files[i];
+            if (this.findSourceObject(source_url))
+                continue;
             let source_format = isThis.#getSourceFormat(source_url);
             let source = null;
             let xhr = new XMLHttpRequest();
@@ -1815,6 +1818,19 @@ class iLGE_2D_Engine {
                         source.src = URL.createObjectURL(
                             new Blob([audioData, { type: "audio/mpeg" }])
                         );
+                        isThis.#loaded_sources++;
+                    };
+                    xhr.send();
+                    this.#source.push(source_object);
+                    break;
+                default:
+                    source_object = new iLGE_2D_Source(null, source_url, iLGE_2D_Source_Type_RAW);
+                    xhr.onload = function () {
+                        if (xhr.status !== 200) {
+                            return;
+                        }
+                        let RAWData = xhr.response;
+                        source_object.source_data = RAWData;
                         isThis.#loaded_sources++;
                     };
                     xhr.send();

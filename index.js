@@ -18,7 +18,7 @@ game.addObject(scene);
 game.title = "Eat The Walls!";
 
 let PRO_ATLAS = new iLGE_2D_Object_Font(
-    game.getSourceObject("PRO_ATLAS.png"), "PRO_ATLAS",
+    game.findSourceObject("PRO_ATLAS.png"), "PRO_ATLAS",
     [
         34, 17, 30, 30, 34, 32, 32, 34, 30,
         32, 30, 30, 27, 30, 30, 27, 27,
@@ -37,7 +37,7 @@ let PRO_ATLAS = new iLGE_2D_Object_Font(
 );
 
 let PDV437 = new iLGE_2D_Object_Font(
-    game.getSourceObject("PDV437.png"), "PDV437",
+    game.findSourceObject("PDV437.png"), "PDV437",
     9,
     16,
     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[] "
@@ -45,7 +45,7 @@ let PDV437 = new iLGE_2D_Object_Font(
 game.addObject(PRO_ATLAS);
 game.addObject(PDV437);
 
-let clang_audio = game.getSourceObject("clang.ogg");
+let clang_audio = game.findSourceObject("clang.ogg");
 let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, scene);
 let camera_hud = new iLGE_2D_Object("MyCameraHud", "camera_hud");
 camera_hud.addElement(
@@ -58,7 +58,7 @@ let transition_ended = false, transition_loop = false;
 
 let transition_effect = new iLGE_2D_Object("Transition_Effect");
 transition_effect.dither = new iLGE_2D_Object_Element_Sprite_Transition_Effect(
-    game.getSourceObject("DitherSprites.png"), "Dither", false, 2
+    game.findSourceObject("DitherSprites.png"), "Dither", false, 2
 );
 transition_effect.addElement(transition_effect.dither);
 
@@ -214,7 +214,7 @@ player.start_function = function (engine) {
     );
     this.cursor.addElement(
         new iLGE_2D_Object_Element_Sprite(
-            engine.getSourceObject("CursorSprite.png"),
+            engine.findSourceObject("CursorSprite.png"),
             "CursorSprite", true, 0, 0, 48, 68
         )
     );
