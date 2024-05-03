@@ -237,18 +237,22 @@ class iLGE_2D_Object_Element_Collider {
     width = 0;
     height = 0;
 
-    collidedWithByClass(class_id = "CLASS") {
+    collidedWithByClass(class_id = "CLASS", index = 0) {
         for (let collided_object of this.collided_objects) {
-            if (collided_object.class_id === class_id)
-                return collided_object;
+            if (collided_object.class_id === class_id) {
+                if (index < 1)
+                    return collided_object;
+                index--;
+            }
         }
         return null;
     }
 
     collidedWithById(id = "OBJID") {
         for (let collided_object of this.collided_objects) {
-            if (collided_object.id === id)
+            if (collided_object.id === id) {
                 return collided_object;
+            }
         }
         return null;
     }
@@ -383,7 +387,29 @@ class iLGE_2D_Scene {
      * @returns {iLGE_2D_Object}
      */
     findObject(id) {
-        return this.#smartFind(this.objects, id);
+        for (let array_object of this.objects) {
+            if (array_object.id === id) {
+                return array_object;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {String} class_id
+     * @param {Number} index
+     * @returns {iLGE_2D_Object}
+     */
+    findObjectByClass(class_id, index = 0) {
+        for (let array_object of this.objects) {
+            if (array_object.class_id === class_id) {
+                if (index < 1)
+                    return array_object;
+                index--;
+            }
+        }
+        return null;
     }
 
     /**
@@ -489,11 +515,13 @@ class iLGE_2D_Object {
         }
     }
 
-    findElementByType(type) {
+    findElementByType(type, index = 0) {
         for (let i = this.element.length - 1; i >= 0; i--) {
             let array_object = this.element[i];
             if (array_object.type === type) {
-                return array_object;
+                if (index < 1)
+                    return array_object;
+                index--;
             }
         }
         return null;
@@ -578,8 +606,11 @@ class iLGE_2D_Object {
 
 class iLGE_2D_Engine {
     auto_resize = false;
+    reset = true;
     width = 0;
     height = 0;
+    start_function = 0;
+    update_function = 0;
 
     #control_map_key = "Control_Map";
 
@@ -748,7 +779,29 @@ class iLGE_2D_Engine {
      * @returns {iLGE_2D_Object}
      */
     findObject(id) {
-        return this.#smartFind(this.#objects, id);
+        for (let array_object of this.#objects) {
+            if (array_object.id === id) {
+                return array_object;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {String} class_id
+     * @param {Number} index
+     * @returns {iLGE_2D_Object}
+     */
+    findObjectByClass(class_id, index = 0) {
+        for (let array_object of this.#objects) {
+            if (array_object.class_id === class_id) {
+                if (index < 1)
+                    return array_object;
+                index--;
+            }
+        }
+        return null;
     }
 
     /**
@@ -1431,7 +1484,16 @@ class iLGE_2D_Engine {
             setTimeout(this.start, this.#time_diff);
             return;
         }
+        if (this.start_function && this.reset) {
+            this.start_function(this);
+            this.reset = false;
+            setTimeout(this.start, this.#time_diff);
+            return;
+        }
         this.#time_old = (new Date()).getTime();
+        if (this.update_function) {
+            this.update_function(this);
+        }
         this.#gamepad_handler(null, this, null);
         let objects_with_collider_element = [];
         let blocker_objects_with_collider_element = [];
@@ -1760,8 +1822,10 @@ class iLGE_2D_Engine {
      */
     findSourceObject(src) {
         for (let i = 0; i < this.#source.length; i++) {
-            if (this.#source[i].compareSrc(src)) {
-                return this.#source[i];
+            if (this.#source[i]) {
+                if (this.#source[i].compareSrc)
+                    if (this.#source[i].compareSrc(src))
+                        return this.#source[i];
             }
         }
         return null;
@@ -1782,25 +1846,37 @@ class iLGE_2D_Engine {
         return src.slice(start_at, end_at);
     }
 
-    constructor(gameid, source_files, html_div, width, height, auto_resize) {
+    unloadResourcesFiles(resource_files) {
         let isThis = this;
-        let vendors = ['webkit', 'moz'];
-        for (let x = 0; x < vendors.length && !window.requestAnimationFrame; x++) {
-            const vendor = vendors[x];
-            window.requestAnimationFrame =
-                window[vendor + 'RequestAnimationFrame'];
-            window.cancelAnimationFrame =
-                window[vendor + 'CancelAnimationFrame'] ||
-                window[vendor + 'CancelRequestAnimationFrame'];
-        }
-        this.gameid = gameid;
-        isThis.#total_sources = source_files.length;
-        for (let i = 0; i < source_files.length; i++) {
-            let source_url = source_files[i];
-            if (this.findSourceObject(source_url))
+        let result = true;
+        if (!resource_files)
+            return false;
+        for (let i = 0; i < resource_files.length; i++) {
+            let source_url = resource_files[i];
+            let source = this.findSourceObject(source_url);
+            if (!source)
                 continue;
+            this.#smartPop(isThis.#source, source);
+            source.source = null;
+            source.source_data = null;
+            isThis.#loaded_sources--;
+            isThis.#total_sources--;
+        }
+        return result;
+    }
+
+    loadResourcesFiles(resource_files) {
+        let isThis = this;
+        let result = true;
+        if (!resource_files)
+            return false;
+        for (let i = 0; i < resource_files.length; i++) {
+            let source_url = resource_files[i];
+            let source = this.findSourceObject(source_url);
+            if (source)
+                continue;
+            isThis.#total_sources++;
             let source_format = isThis.#getSourceFormat(source_url);
-            let source = null;
             let xhr = new XMLHttpRequest();
             let source_object;
             xhr.open("GET", source_url);
@@ -1813,11 +1889,14 @@ class iLGE_2D_Engine {
                     source_object = new iLGE_2D_Source(source, source_url, iLGE_2D_Source_Type_Image);
                     xhr.onload = function () {
                         if (xhr.status !== 200) {
+                            isThis.#total_sources--;
+                            result = false;
                             return;
                         }
                         let imageData = xhr.response;
                         source_object.source_data = imageData;
                         source.onload = function () {
+                            isThis.#source.push(source_object);
                             isThis.#loaded_sources++;
                         };
                         source.src = URL.createObjectURL(
@@ -1825,7 +1904,6 @@ class iLGE_2D_Engine {
                         );
                     };
                     xhr.send();
-                    this.#source.push(source_object);
                     break;
                 case ".wav":
                 case ".mp3":
@@ -1834,6 +1912,8 @@ class iLGE_2D_Engine {
                     source_object = new iLGE_2D_Source(source, source_url, iLGE_2D_Source_Type_Audio);
                     xhr.onload = function () {
                         if (xhr.status !== 200) {
+                            isThis.#total_sources--;
+                            result = false;
                             return;
                         }
                         let audioData = xhr.response;
@@ -1841,26 +1921,44 @@ class iLGE_2D_Engine {
                         source.src = URL.createObjectURL(
                             new Blob([audioData, { type: "audio/mpeg" }])
                         );
+                        isThis.#source.push(source_object);
                         isThis.#loaded_sources++;
                     };
                     xhr.send();
-                    this.#source.push(source_object);
                     break;
                 default:
                     source_object = new iLGE_2D_Source(null, source_url, iLGE_2D_Source_Type_RAW);
                     xhr.onload = function () {
                         if (xhr.status !== 200) {
+                            isThis.#total_sources--;
+                            result = false;
                             return;
                         }
                         let RAWData = xhr.response;
                         source_object.source_data = RAWData;
+                        isThis.#source.push(source_object);
                         isThis.#loaded_sources++;
                     };
                     xhr.send();
-                    this.#source.push(source_object);
                     break;
             }
         }
+        return result;
+    }
+
+    constructor(gameid, resource_files, html_div, width, height, auto_resize) {
+        let isThis = this;
+        let vendors = ['webkit', 'moz'];
+        for (let x = 0; x < vendors.length && !window.requestAnimationFrame; x++) {
+            const vendor = vendors[x];
+            window.requestAnimationFrame =
+                window[vendor + 'RequestAnimationFrame'];
+            window.cancelAnimationFrame =
+                window[vendor + 'CancelAnimationFrame'] ||
+                window[vendor + 'CancelRequestAnimationFrame'];
+        }
+        this.loadResourcesFiles(resource_files);
+        this.gameid = gameid;
         this.start = this.start.bind(isThis);
         this.canvas = document.createElement("canvas");
         this.canvas_context = this.canvas.getContext("2d");

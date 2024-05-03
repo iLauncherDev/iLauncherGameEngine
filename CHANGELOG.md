@@ -1,3 +1,7 @@
+# 0.2.9
+    added load and unload resource files functions in iLGE_2D_Engine class
+    added start_function and update_function variable in iLGE_2D_Engine class
+
 # 0.2.8
     improved camera rendering quality
     added scale support for #draw_camera_scene function in iLGE_2D_Engine class
