@@ -1821,7 +1821,7 @@ class iLGE_2D_Engine {
         let isThis = this;
         if (!Date.now) {
             Date.now = function() {
-                return new Date().getTime(); 
+                return new Date().getTime();
             };
         }
         this.gameid = gameid;
