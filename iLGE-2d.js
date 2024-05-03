@@ -1946,6 +1946,14 @@ class iLGE_2D_Engine {
         return result;
     }
 
+    setScreenResolution(width, height) {
+        this.auto_resize = false;
+        this.width = width;
+        this.height = height;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+    }
+
     constructor(gameid, resource_files, html_div, width, height, auto_resize) {
         let isThis = this;
         let vendors = ['webkit', 'moz'];
