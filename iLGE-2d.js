@@ -91,9 +91,7 @@ class iLGE_2D_Object_Font {
         if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
             return;
         image_object = source_object.source;
-        this.canvas = document.createElement("canvas");
-        this.canvas.style = "background-color: transparent;";
-        this.canvas.id = id;
+        this.canvas = new OffscreenCanvas(1, 1);
         this.canvas_context = this.canvas.getContext("2d");
         this.image = image_object;
         this.id = id;
@@ -889,12 +887,73 @@ class iLGE_2D_Engine {
         return null;
     }
 
+    fastDrawImage = true;
+
+    #drawImage(canvas_context, image, sx, sy, swidth, sheight, dx, dy, width, height) {
+        if (this.fastDrawImage) {
+            canvas_context.drawImage(
+                image,
+                sx, sy, swidth, sheight,
+                dx, dy, width, height
+            );
+            return;
+        }
+        if (!image.canvas) {
+            image.canvas = new OffscreenCanvas(1, 1);
+            image.canvas_context = image.canvas.getContext("2d");
+        }
+        const width_scale = width / swidth;
+        const height_scale = height / sheight;
+        let swidth4 = swidth * 4;
+        let width4 = width * 4;
+        image.canvas.width = swidth;
+        image.canvas.height = sheight;
+        image.canvas_context.drawImage(
+            image,
+            sx, sy, swidth, sheight,
+            0, 0, swidth, sheight
+        );
+        image.data = image.canvas_context.getImageData(0, 0, swidth, sheight).data;
+        let outputImage = new ImageData(
+            width,
+            height
+        );
+        let precalc0 = [],
+            precalc1 = [];
+        for (let y = 0, y1 = 0; y < sheight; y++, y1 += swidth4) {
+            let cache_y = Math.floor(y * height_scale) * width4;
+            precalc0[y] = [];
+            precalc1[y] = [];
+            for (let x = 0, x1 = 0; x < swidth; x++, x1 += 4) {
+                let cache_x = Math.floor(x * width_scale) * 4;
+                precalc0[y][x] = y1 + x1;
+                precalc1[y][x] = cache_y + cache_x;
+            }
+        }
+        for (let y = 0; y < sheight; y++) {
+            for (let x = 0; x < swidth; x++) {
+                let cache0 = precalc0[y][x], cache1 = precalc1[y][x];
+                for (let i = 3; i >= 0; i--)
+                    outputImage.data[cache1 + i] = image.data[cache0 + i];
+            }
+        }
+        image.canvas.width = width;
+        image.canvas.height = height;
+        image.canvas_context.putImageData(outputImage, 0, 0);
+        canvas_context.drawImage(
+            image.canvas,
+            0, 0, width, height,
+            dx, dy, width, height
+        );
+    }
+
     #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color) {
         if (!string || !canvas_context || !font_id)
             return;
         let font_object = this.#find_font(font_id);
         if (!font_object)
             return;
+        font_object.canvas.height = font_object.height;
         const font_scale = font_object.height / px;
         const font_height = Math.round(font_object.height / font_scale);
         if (y + px > max_height)
@@ -918,21 +977,21 @@ class iLGE_2D_Engine {
             }
             if (y + font_y_pos >= max_height)
                 break;
-            font_object.canvas.width = font_width;
-            font_object.canvas.height = font_height;
+            font_object.canvas.width = font_object.width_array[char];
             font_object.canvas_context.imageSmoothingEnabled = false;
             font_object.canvas_context.drawImage(
                 font_object.image,
                 font_object.map[char][0], font_object.map[char][1],
-                font_object.width_array[char], font_object.height,
+                font_object.canvas.width, font_object.canvas.height,
                 0, 0,
-                font_width, font_height);
+                font_object.canvas.width, font_object.canvas.height
+            );
             font_object.canvas_context.globalCompositeOperation = "source-in";
             font_object.canvas_context.fillStyle = color;
-            font_object.canvas_context.fillRect(0, 0, font_width, font_height);
-            canvas_context.drawImage(
-                font_object.canvas,
-                0, 0, font_width, font_height,
+            font_object.canvas_context.fillRect(0, 0, font_object.canvas.width, font_object.canvas.height);
+            this.#drawImage(
+                canvas_context, font_object.canvas,
+                0, 0, font_object.canvas.width, font_object.canvas.height,
                 x + font_x_pos, y + font_y_pos, font_width, font_height
             );
             font_x_pos += font_width;
@@ -969,8 +1028,8 @@ class iLGE_2D_Engine {
                                     );
                                     break;
                                 case iLGE_2D_Object_Element_Type_Sprite:
-                                    camera.canvas_context.drawImage(
-                                        element.image,
+                                    this.#drawImage(
+                                        camera.canvas_context, element.image,
                                         element.src_x, element.src_y,
                                         element.src_width, element.src_height,
                                         -object_half_size[0],
@@ -1045,10 +1104,8 @@ class iLGE_2D_Engine {
         if (!camera || camera.type !== iLGE_2D_Object_Type_Camera || !camera.scene)
             return;
         if (!camera.canvas) {
-            camera.canvas = document.createElement("canvas");
-            camera.canvas.id = camera.id;
+            camera.canvas = new OffscreenCanvas(1, 1);
             camera.canvas_context = camera.canvas.getContext("2d");
-            camera.canvas_context.imageSmoothingEnabled = false;
         }
         let scale = 1;
         if (camera.scale > 0) {
@@ -1074,8 +1131,8 @@ class iLGE_2D_Engine {
                     );
                     break;
                 case iLGE_2D_Object_Element_Type_Sprite:
-                    camera.canvas_context.drawImage(
-                        element.image,
+                    this.#drawImage(
+                        camera.canvas_context, element.image,
                         element.src_x, element.src_y,
                         element.src_width, element.src_height,
                         0, 0,
@@ -1230,8 +1287,8 @@ class iLGE_2D_Engine {
                                 );
                                 break;
                             case iLGE_2D_Object_Element_Type_Sprite:
-                                this.canvas_context.drawImage(
-                                    element.image,
+                                this.#drawImage(
+                                    this.canvas_context, element.image,
                                     element.src_x, element.src_y,
                                     element.src_width, element.src_height,
                                     -object_half_size[0],

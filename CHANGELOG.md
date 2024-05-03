@@ -1,3 +1,6 @@
+# 0.2.6
+    optimize #drawText function in iLGE_2D_Engine class
+
 # 0.2.5
     add support for RAW files
 
