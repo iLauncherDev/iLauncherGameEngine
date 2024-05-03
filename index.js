@@ -302,6 +302,7 @@ player.update_function = function (engine) {
     }
     this.cursor_update(engine, movementX, movementY, true);
     this.game_title.element[0].string =
+        engine.fps + " FPS\n" +
         engine.title + "\n" +
         eated_walls + "/" + total_walls + " Eated Walls";
     let stamina = this.stamina / this.max_stamina;
@@ -314,7 +315,7 @@ player.update_function = function (engine) {
         (engine.height - this.stamina_hud_red.height * this.stamina_hud_red.scale_output)
         - 4 * this.stamina_hud_red.scale_output;
     this.stamina_hud_green.y = this.stamina_hud_red.y;
-    this.stamina_level.element[0].string = Math.floor(stamina * 100) + "%";
+    this.stamina_level.element[0].string = "Stamina " + Math.floor(stamina * 100) + "%";
     this.stamina_level.width = this.stamina_level.element[0].string.length * 9;
     this.stamina_level.y =
         this.stamina_hud_red.y - this.stamina_level.height * this.stamina_level.scale_output;

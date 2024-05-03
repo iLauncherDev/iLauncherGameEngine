@@ -1,3 +1,6 @@
+# 0.2.7
+    fixed pointerLock for chromium-based browsers
+
 # 0.2.6
     optimize #drawText function in iLGE_2D_Engine class
 

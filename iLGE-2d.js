@@ -1466,7 +1466,7 @@ class iLGE_2D_Engine {
             window.requestAnimationFrame(this.start);
             return;
         }
-        this.#time_old = (new Date()).getTime();
+        this.#time_old = Date.now();
         this.#gamepad_handler(null, this, null);
         let objects_with_collider_element = [];
         let blocker_objects_with_collider_element = [];
@@ -1498,7 +1498,7 @@ class iLGE_2D_Engine {
             blocker_objects_with_collider_element
         );
         this.#draw();
-        this.#time_new = (new Date()).getTime();
+        this.#time_new = Date.now();
         this.#time_diff = this.#time_new - this.#time_old;
         this.deltaTime = this.#time_diff / (1000 / 60);
         this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
@@ -1651,10 +1651,6 @@ class iLGE_2D_Engine {
                 event.preventDefault();
                 break;
             case "ButtonDown":
-                if (isThis.pointerLock)
-                    isThis.canvas.requestPointerLock({
-                        unadjustedMovement: true,
-                    });
                 if (!isThis.#controls[mouse_button_toggled_string][event.button]) {
                     isThis.#controls["Mouse_Button_" + event.button + "_Toggle"] =
                         isThis.#controls["Mouse_Button_" + event.button + "_Toggle"] ? false : true;
@@ -1663,10 +1659,6 @@ class iLGE_2D_Engine {
                 isThis.#controls["Mouse_Button_" + event.button] = true;
                 break;
             case "ButtonUp":
-                if (isThis.pointerLock)
-                    isThis.canvas.requestPointerLock({
-                        unadjustedMovement: true,
-                    });
                 isThis.#controls["Mouse_Button_" + event.button] = false;
                 isThis.#controls[mouse_button_toggled_string][event.button] = false;
                 break;
@@ -1827,6 +1819,11 @@ class iLGE_2D_Engine {
 
     constructor(gameid, source_files, html_div, width, height, auto_resize) {
         let isThis = this;
+        if (!Date.now) {
+            Date.now = function() {
+                return new Date().getTime(); 
+            };
+        }
         this.gameid = gameid;
         isThis.#total_sources = source_files.length;
         for (let i = 0; i < source_files.length; i++) {
@@ -1941,6 +1938,10 @@ class iLGE_2D_Engine {
         this.canvas.addEventListener("touchcancel",
             function (event) {
                 isThis.#touch_handler(event, isThis, "cancel");
+            }, true);
+        this.canvas.addEventListener("click",
+            async function (event) {
+                await isThis.canvas.requestPointerLock();
             }, true);
         this.canvas.addEventListener("mousemove",
             function (event) {
