@@ -595,12 +595,12 @@ class iLGE_2D_Engine {
     #loaded_sources = 0;
     #total_sources = 0;
 
-    deltaTime = 1;
+    deltaTime = 0;
     fps = 0;
 
-    #time_new = 2000;
-    #time_old = 1000;
-    #time_diff = 1000;
+    #time_new = 0;
+    #time_old = 0;
+    #time_diff = 0;
 
     pointerLock = false;
 
@@ -608,6 +608,54 @@ class iLGE_2D_Engine {
     #gamepads_connected_string = "Gamepads_connected";
     #gamepad_button_string = "_Button_";
     #gamepad_axis_string = "_Axis_";
+
+    /**
+     * 
+     * @param {Array} array 
+     */
+    #getZOrderInfo(array) {
+        let min = Infinity, max = -Infinity;
+        for (let object of array) {
+            const value = object.z_order;
+            switch (object.type) {
+                case iLGE_2D_Object_Type_Custom:
+                case iLGE_2D_Object_Type_Camera:
+                    if (value > max)
+                        max = value;
+                    if (value < min)
+                        min = value;
+                    break;
+            }
+        }
+        return {
+            min: min,
+            max: max,
+        };
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     */
+    #getPriorityInfo(array) {
+        let min = Infinity, max = -Infinity;
+        for (let object of array) {
+            const value = object.priority;
+            switch (object.type) {
+                case iLGE_2D_Object_Type_Custom:
+                case iLGE_2D_Object_Type_Camera:
+                    if (value > max)
+                        max = value;
+                    if (value < min)
+                        min = value;
+                    break;
+            }
+        }
+        return {
+            min: min,
+            max: max,
+        };
+    }
 
     /**
      * 
@@ -962,6 +1010,7 @@ class iLGE_2D_Engine {
                             object.y + object_half_size[1]
                         );
                         camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
+                        camera.canvas_context.scale(object.scale, object.scale);
                         for (let element of object.element) {
                             if (!element.visible)
                                 continue;
@@ -1007,44 +1056,6 @@ class iLGE_2D_Engine {
         return z_order_find;
     }
 
-    #getZOrderInfo(array) {
-        let min = Infinity, max = -Infinity;
-        for (let object of array) {
-            switch (object.type) {
-                case iLGE_2D_Object_Type_Custom:
-                case iLGE_2D_Object_Type_Camera:
-                    if (object.z_order > max)
-                        max = object.z_order;
-                    if (object.z_order < min)
-                        min = object.z_order;
-                    break;
-            }
-        }
-        return {
-            min: min,
-            max: max,
-        };
-    }
-
-    #getPriorityInfo(array) {
-        let min = Infinity, max = -Infinity;
-        for (let object of array) {
-            switch (object.type) {
-                case iLGE_2D_Object_Type_Custom:
-                case iLGE_2D_Object_Type_Camera:
-                    if (object.priority > max)
-                        max = object.priority;
-                    if (object.priority < min)
-                        min = object.priority;
-                    break;
-            }
-        }
-        return {
-            min: min,
-            max: max,
-        };
-    }
-
     /**
     * @param camera {iLGE_2D_Object}
     */
@@ -1062,11 +1073,27 @@ class iLGE_2D_Engine {
                 object.height / camera.scale
             );
         }
+        camera.scale_output = scale;
         camera.width = object.width / scale;
         camera.height = object.height / scale;
-        camera.canvas.width = Math.round(camera.width);
-        camera.canvas.height = Math.round(camera.height);
+        camera.canvas.width = object.width;
+        camera.canvas.height = object.height;
         camera.canvas_context.imageSmoothingEnabled = false;
+        let vcamera = new iLGE_2D_Object(
+            null, null, iLGE_2D_Object_Type_Camera,
+            camera.x, camera.y,
+            camera.rotation, camera.scale, camera.width, camera.height
+        );
+        if (this.occlusion_culling_test) {
+            vcamera.width /= 2;
+            vcamera.height /= 2;
+            vcamera.x += (camera.width / 2) / 2;
+            vcamera.y += (camera.height / 2) / 2;
+        }
+        vcamera.prepareForCollision();
+        let halfSize = camera.getHalfSize();
+        camera.canvas_context.save();
+        camera.canvas_context.scale(scale, scale);
         for (let element of camera.element) {
             if (!element.visible)
                 continue;
@@ -1089,20 +1116,6 @@ class iLGE_2D_Engine {
                     break;
             }
         }
-        let vcamera = new iLGE_2D_Object(
-            null, null, iLGE_2D_Object_Type_Camera,
-            camera.x, camera.y,
-            camera.rotation, camera.scale, camera.width, camera.height
-        );
-        if (this.occlusion_culling_test) {
-            vcamera.width /= 2;
-            vcamera.height /= 2;
-            vcamera.x += (camera.width / 2) / 2;
-            vcamera.y += (camera.height / 2) / 2;
-        }
-        vcamera.prepareForCollision();
-        let halfSize = camera.getHalfSize();
-        camera.canvas_context.save();
         camera.canvas_context.translate(
             halfSize[0],
             halfSize[1]
@@ -1415,10 +1428,10 @@ class iLGE_2D_Engine {
             this.canvas.style = "cursor: none;";
         }
         if (this.#loaded_sources < this.#total_sources) {
-            window.requestAnimationFrame(this.start);
+            setTimeout(this.start, this.#time_diff);
             return;
         }
-        this.#time_old = Date.now();
+        this.#time_old = (new Date()).getTime();
         this.#gamepad_handler(null, this, null);
         let objects_with_collider_element = [];
         let blocker_objects_with_collider_element = [];
@@ -1450,11 +1463,11 @@ class iLGE_2D_Engine {
             blocker_objects_with_collider_element
         );
         this.#draw();
-        this.#time_new = Date.now();
+        this.#time_new = (new Date()).getTime();
         this.#time_diff = this.#time_new - this.#time_old;
         this.deltaTime = this.#time_diff / (1000 / 60);
         this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
-        window.requestAnimationFrame(this.start);
+        setTimeout(this.start, this.#time_diff);
     }
 
     /**
@@ -1771,10 +1784,14 @@ class iLGE_2D_Engine {
 
     constructor(gameid, source_files, html_div, width, height, auto_resize) {
         let isThis = this;
-        if (!Date.now) {
-            Date.now = function () {
-                return new Date().getTime();
-            };
+        let vendors = ['webkit', 'moz'];
+        for (let x = 0; x < vendors.length && !window.requestAnimationFrame; x++) {
+            const vendor = vendors[x];
+            window.requestAnimationFrame =
+                window[vendor + 'RequestAnimationFrame'];
+            window.cancelAnimationFrame =
+                window[vendor + 'CancelAnimationFrame'] ||
+                window[vendor + 'CancelRequestAnimationFrame'];
         }
         this.gameid = gameid;
         isThis.#total_sources = source_files.length;

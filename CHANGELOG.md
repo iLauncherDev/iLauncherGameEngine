@@ -1,3 +1,7 @@
+# 0.2.8
+    improved camera rendering quality
+    added scale support for #draw_camera_scene function in iLGE_2D_Engine class
+
 # 0.2.7
     fixed pointerLock for chromium-based browsers
 
