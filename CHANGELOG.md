@@ -1,3 +1,6 @@
+# 0.3.0
+    check if pointerLock is true before locking
+
 # 0.2.10
     added setScreenResolution function in iLGE_2D_Engine class
 

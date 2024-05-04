@@ -640,6 +640,10 @@ class iLGE_2D_Engine {
     #gamepad_button_string = "_Button_";
     #gamepad_axis_string = "_Axis_";
 
+    #getTime() {
+        return (new Date()).getTime();
+    }
+
     /**
      * 
      * @param {Array} array 
@@ -1472,6 +1476,11 @@ class iLGE_2D_Engine {
         }
     }
 
+    #requestAnimationFrame(animation_function) {
+        if (animation_function)
+            setInterval(animation_function, this.#time_diff);
+    }
+
     start() {
         if (!this.pointerLock) {
             document.exitPointerLock();
@@ -1481,16 +1490,16 @@ class iLGE_2D_Engine {
             this.canvas.style = "cursor: none;";
         }
         if (this.#loaded_sources < this.#total_sources) {
-            setTimeout(this.start, this.#time_diff);
+            this.#requestAnimationFrame(this.start);
             return;
         }
         if (this.start_function && this.reset) {
             this.start_function(this);
             this.reset = false;
-            setTimeout(this.start, this.#time_diff);
+            this.#requestAnimationFrame(this.start);
             return;
         }
-        this.#time_old = (new Date()).getTime();
+        this.#time_old = this.#getTime();
         if (this.update_function) {
             this.update_function(this);
         }
@@ -1525,11 +1534,11 @@ class iLGE_2D_Engine {
             blocker_objects_with_collider_element
         );
         this.#draw();
-        this.#time_new = (new Date()).getTime();
+        this.#time_new = this.#getTime();
         this.#time_diff = this.#time_new - this.#time_old;
         this.deltaTime = this.#time_diff / (1000 / 60);
         this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
-        setTimeout(this.start, this.#time_diff);
+        this.#requestAnimationFrame(this.start);
     }
 
     /**
@@ -2016,7 +2025,8 @@ class iLGE_2D_Engine {
             }, true);
         this.canvas.addEventListener("click",
             async function (event) {
-                await isThis.canvas.requestPointerLock();
+                if (this.pointerLock)
+                    await isThis.canvas.requestPointerLock();
             }, true);
         this.canvas.addEventListener("mousemove",
             function (event) {
