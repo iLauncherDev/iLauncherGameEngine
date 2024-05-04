@@ -1,3 +1,9 @@
+# 0.3.1
+    added setAudioVolume in iLGE_2D_Source class
+    removed useless resumeAudio in iLGE_2D_Source class
+    improved cloneIt function in iLGE_2D_Source class
+    added setDelay and checkDelay functions in iLGE_2D_Engine class
+
 # 0.3.0
     check if pointerLock is true before locking
 

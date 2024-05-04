@@ -20,7 +20,7 @@ const iLGE_2D_Source_Type_RAW = "RAW_Source";
 
 class iLGE_2D_Source {
     source = 0;
-    source_data = 0;
+    source_data = [];
     #src = null;
     #type = null;
 
@@ -49,26 +49,43 @@ class iLGE_2D_Source {
         this.source.pause();
     }
 
-    resumeAudio() {
-        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
-            return;
-        this.source.play();
-    }
-
     playAudio() {
         if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
             return;
-        this.source.currentTime = 0;
         this.source.play();
     }
 
     setAudioTime(time = 0) {
-        this.currentTime = time;
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+            return;
+        this.source.currentTime = time;
+    }
+
+    setAudioVolume(volume = 1) {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+            return;
+        this.source.volume = volume;
     }
 
     cloneIt() {
-        let source = new Audio(this.source.src);
-        return new iLGE_2D_Source(source, this.#src, this.#type);
+        let source = new iLGE_2D_Source(null, this.#src, this.#type);
+        switch (this.#type) {
+            case iLGE_2D_Source_Type_Audio:
+                source.source = new Audio();
+                source.source.src = this.source.src;
+                break;
+            case iLGE_2D_Source_Type_Image:
+                source.source = new Image();
+                source.source.src = this.source.src;
+                break;
+        }
+        if (this.source_data) {
+            let arraybuffer = new ArrayBuffer(this.source_data.length);
+            for (let i = 0; i < arraybuffer.length; i++)
+                arraybuffer[i] = this.source_data[i];
+            source.source_data = arraybuffer;
+        }
+        return source;
     }
 
     constructor(source, src, type) {
@@ -1961,6 +1978,28 @@ class iLGE_2D_Engine {
         this.height = height;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} object 
+     * @param {Number} ms
+     */
+    setDelay(object, ms) {
+        if (typeof object !== "object" || typeof ms !== "number")
+            return;
+        object.delay = ms;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} object 
+     */
+    checkDelay(object) {
+        if (typeof object !== "object" || typeof object.delay !== "number")
+            return false;
+        object.delay -= this.#time_diff;
+        return object.delay < 1 ? true : false;
     }
 
     constructor(gameid, resource_files, html_div, width, height, auto_resize) {

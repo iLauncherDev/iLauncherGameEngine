@@ -1,9 +1,33 @@
-# iLGE
-iLGE is a Game Engine made in javascript, [click here](https://ilauncherdev.github.io/iLauncherGameEngine/) to open the example game
+# iLGE(iLauncherGameEngine)
+iLGE(iLauncherGameEngine) is a Game Engine made in javascript, [click here](https://ilauncherdev.github.io/iLauncherGameEngine/) to open the example game.
+
+Features:
+- [x] audio object
+- [x] data manager(Ex: data_add_item(key, variable), data_remove_item(key) and data_read_item(key))
+- [x] clock features(Ex: setDelay(object, ms) and checkDelay(object) functions)
+- [x] rectangle element
+- [x] sprite element
+- [x] sprite effect element(Ex: dithering sprite effect element)
+- [x] sprite font(Ex: `new iLGE_2D_Object_Font(source_object, "Font_ID", font_width, font_height, "abcdef")`)
+- [x] text element
+- [x] collider element
+- [x] resource manager
+- [x] object scale
+- [x] object rotation
+- [x] object priority for start_function, update_function and collisions
+- [x] object z-order
+- [x] object start_function(engine) and update_function(engine)
+- [x] 2d vector for object movements
+
 
 # Let's Get Started on this library
-1th: download the file named [iLGE-2d.js](https://raw.githubusercontent.com/iLauncherDev/iLauncherGameEngine/main/iLGE-2d.js "Open the context menu and click 'Save link as' or something like that") to your working folder
-2nd: create the files to your working folder below:
+- download [vscode](https://code.visualstudio.com/) and install it to start.
+- open vscode.
+- click in the "Extensions" or Press Ctrl+Shift+X Keys and search for "Live Server".
+- install extension called "Live Server".
+- prepare your working folder.
+- download the file named [iLGE-2d.js](https://raw.githubusercontent.com/iLauncherDev/iLauncherGameEngine/main/iLGE-2d.js "Open the context menu and click 'Save link as' or something like that") to your working folder.
+- create the files to your working folder below:
 
 index.html:
 ```
@@ -173,3 +197,4 @@ game.start_function = function (engine) {
 };
 game.start();
 ```
+- click the "Go Live" button and test your first game!

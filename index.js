@@ -43,6 +43,7 @@ game.start_function = function (engine) {
         16,
         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[] "
     );
+    
     this.addObject(PRO_ATLAS);
     this.addObject(PDV437);
 
@@ -353,7 +354,7 @@ game.start_function = function (engine) {
             engine.control_map_get("Down", true) - engine.control_map_get("Up", true)
         );
         let run = engine.control_map_get("RUN", true);
-        let collided_wall = null;
+        let collided_wall = null, collided_index = 0;
         this.rotation +=
             (movementX * this.mouse_sensitivity -
                 engine.control_map_get("MovementX1", false) * this.gamepad_sensitivity * engine.deltaTime);
@@ -395,11 +396,29 @@ game.start_function = function (engine) {
                 camera.rotation = this.rotation;
         }
         if (engine.control_map_get("Interact", true)) {
-            collided_wall = this.collider.collidedWithByClass("wall");
-            if (collided_wall) {
-                this.scene.removeObject(collided_wall.id);
-                clang_audio.cloneIt().playAudio();
-                eated_walls++;
+            collided_wall = this.collider.collidedWithByClass("wall", collided_index++);
+            while (collided_wall) {
+                /**
+                 * 
+                 * @param {iLGE_2D_Engine} engine 
+                 */
+                collided_wall.start_function = function (engine) {
+                    engine.setDelay(this, 150);
+                }
+                /**
+                 * 
+                 * @param {iLGE_2D_Engine} engine 
+                 */
+                collided_wall.update_function = function (engine) {
+                    if (engine.checkDelay(this)) {
+                        this.scene.removeObject(this.id);
+                        clang_audio.cloneIt().playAudio();
+                        eated_walls++;
+                    }
+                };
+                if (engine.checkDelay(collided_wall))
+                    collided_wall.reset = true;
+                collided_wall = this.collider.collidedWithByClass("wall", collided_index++);
             }
         }
     }
