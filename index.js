@@ -43,7 +43,7 @@ game.start_function = function (engine) {
         16,
         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!;%:?*()_+-=.,/|\"'@#$^&{}[] "
     );
-    
+
     this.addObject(PRO_ATLAS);
     this.addObject(PDV437);
 
@@ -403,20 +403,20 @@ game.start_function = function (engine) {
                  * @param {iLGE_2D_Engine} engine 
                  */
                 collided_wall.start_function = function (engine) {
-                    engine.setDelay(this, 150);
+                    this.delay = 150;
                 }
                 /**
                  * 
                  * @param {iLGE_2D_Engine} engine 
                  */
                 collided_wall.update_function = function (engine) {
-                    if (engine.checkDelay(this)) {
+                    if (this.delay < 1) {
                         this.scene.removeObject(this.id);
                         clang_audio.cloneIt().playAudio();
                         eated_walls++;
                     }
                 };
-                if (engine.checkDelay(collided_wall))
+                if (collided_wall.delay < 1)
                     collided_wall.reset = true;
                 collided_wall = this.collider.collidedWithByClass("wall", collided_index++);
             }

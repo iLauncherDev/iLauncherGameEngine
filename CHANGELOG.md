@@ -1,3 +1,8 @@
+# 0.3.2
+    added multiply, divide and cloneIt functions in iLGE_2D_Vector2 class
+    removed setDelay and checkDelay functions in iLGE_2D_Engine class, use object.delay instead
+    fixed pointerLock
+
 # 0.3.1
     added setAudioVolume in iLGE_2D_Source class
     removed useless resumeAudio in iLGE_2D_Source class

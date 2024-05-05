@@ -140,16 +140,40 @@ class iLGE_2D_Object_Font {
 class iLGE_2D_Vector2 {
     x = 0; y = 0;
 
+    cloneIt() {
+        return new iLGE_2D_Vector2(x, y);
+    }
+
     sum(vector) {
         if (!vector)
             return this;
-        return new iLGE_2D_Vector2(this.x + vector.x, this.y + vector.y);
+        this.x += vector.x;
+        this.y += vector.y;
+        return this;
     }
 
     subtract(vector) {
         if (!vector)
             return this;
-        return new iLGE_2D_Vector2(this.x - vector.x, this.y - vector.y);
+        this.x -= vector.x;
+        this.y -= vector.y;
+        return this;
+    }
+
+    multiply(vector) {
+        if (!vector)
+            return this;
+        this.x *= vector.x;
+        this.y *= vector.y;
+        return this;
+    }
+
+    divide(vector) {
+        if (!vector)
+            return this;
+        this.x = vector.x !== 0 ? (this.x / vector.x) : 0;
+        this.y = vector.y !== 0 ? (this.y / vector.y) : 0;
+        return this;
     }
 
     magnitude() {
@@ -160,16 +184,17 @@ class iLGE_2D_Vector2 {
         let magnitude = this.magnitude();
         if (!magnitude)
             return this;
-        return new iLGE_2D_Vector2(this.x / magnitude, this.y / magnitude);
+        this.x /= magnitude;
+        this.y /= magnitude;
+        return this;
     }
 
     transform(vector) {
         if (!vector)
             return this;
-        return new iLGE_2D_Vector2(
-            vector.x * this.x - vector.y * this.y,
-            vector.y * this.x + vector.x * this.y
-        );
+        this.x = vector.x * this.x - vector.y * this.y;
+        this.y = vector.y * this.x + vector.x * this.y;
+        return this;
     }
 
     constructor(x = 0, y = 0) {
@@ -464,6 +489,7 @@ class iLGE_2D_Object {
     class_id = "CLASS";
     scene = 0;
     priority = 0;
+    delay = 0;
 
     x = 0;
     y = 0;
@@ -1466,6 +1492,8 @@ class iLGE_2D_Engine {
             for (let object of array) {
                 if (object.priority !== p)
                     continue;
+                if (object.delay > 0)
+                    object.delay -= this.#time_diff;
                 object.scene = scene;
                 object.old_x = object.x;
                 object.old_y = object.y;
@@ -1980,28 +2008,6 @@ class iLGE_2D_Engine {
         this.canvas.height = this.height;
     }
 
-    /**
-     * 
-     * @param {iLGE_2D_Object} object 
-     * @param {Number} ms
-     */
-    setDelay(object, ms) {
-        if (typeof object !== "object" || typeof ms !== "number")
-            return;
-        object.delay = ms;
-    }
-
-    /**
-     * 
-     * @param {iLGE_2D_Object} object 
-     */
-    checkDelay(object) {
-        if (typeof object !== "object" || typeof object.delay !== "number")
-            return false;
-        object.delay -= this.#time_diff;
-        return object.delay < 1 ? true : false;
-    }
-
     constructor(gameid, resource_files, html_div, width, height, auto_resize) {
         let isThis = this;
         let vendors = ['webkit', 'moz'];
@@ -2064,7 +2070,7 @@ class iLGE_2D_Engine {
             }, true);
         this.canvas.addEventListener("click",
             async function (event) {
-                if (this.pointerLock)
+                if (isThis.pointerLock)
                     await isThis.canvas.requestPointerLock();
             }, true);
         this.canvas.addEventListener("mousemove",

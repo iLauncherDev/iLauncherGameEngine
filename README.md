@@ -4,7 +4,6 @@ iLGE(iLauncherGameEngine) is a Game Engine made in javascript, [click here](http
 Features:
 - [x] audio object
 - [x] data manager(Ex: data_add_item(key, variable), data_remove_item(key) and data_read_item(key))
-- [x] clock features(Ex: setDelay(object, ms) and checkDelay(object) functions)
 - [x] rectangle element
 - [x] sprite element
 - [x] sprite effect element(Ex: dithering sprite effect element)
@@ -12,6 +11,7 @@ Features:
 - [x] text element
 - [x] collider element
 - [x] resource manager
+- [x] object delay
 - [x] object scale
 - [x] object rotation
 - [x] object priority for start_function, update_function and collisions
