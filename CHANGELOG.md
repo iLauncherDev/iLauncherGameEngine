@@ -1,3 +1,6 @@
+# 0.3.4
+    use modern browsers api
+
 # 0.3.3
     fixed the possibility of some collisions being ignored
     duplicated objects will be ignored

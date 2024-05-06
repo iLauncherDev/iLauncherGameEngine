@@ -687,7 +687,7 @@ class iLGE_2D_Engine {
     #gamepad_axis_string = "_Axis_";
 
     #getTime() {
-        return (new Date()).getTime();
+        return performance.now();
     }
 
     /**
@@ -1534,7 +1534,7 @@ class iLGE_2D_Engine {
 
     #requestAnimationFrame(animation_function) {
         if (animation_function)
-            setInterval(animation_function, this.#time_diff);
+            window.requestAnimationFrame(animation_function);
     }
 
     start() {
