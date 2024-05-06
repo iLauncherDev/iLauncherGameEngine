@@ -358,10 +358,12 @@ game.start_function = function (engine) {
         this.rotation +=
             (movementX * this.mouse_sensitivity -
                 engine.control_map_get("MovementX1", false) * this.gamepad_sensitivity * engine.deltaTime);
-        let vector_movement = (new iLGE_2D_Vector2(
+        let vector_movement = new iLGE_2D_Vector2(
             Left,
             Up
-        )).transform(this.getRotationVector()).normalize();
+        );
+        vector_movement.transform(this.getRotationVector());
+        vector_movement.normalize();
         this.x += vector_movement.x * this.speed * engine.deltaTime;
         this.y += vector_movement.y * this.speed * engine.deltaTime;
         if (run && this.stamina > 0) {

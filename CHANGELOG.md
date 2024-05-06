@@ -1,3 +1,8 @@
+# 0.3.3
+    fixed the possibility of some collisions being ignored
+    duplicated objects will be ignored
+    fixed transform function in iLGE_2D_Vector2 class
+
 # 0.3.2
     added multiply, divide and cloneIt functions in iLGE_2D_Vector2 class
     removed setDelay and checkDelay functions in iLGE_2D_Engine class, use object.delay instead
