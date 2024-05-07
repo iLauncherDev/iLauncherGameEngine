@@ -1,3 +1,6 @@
+# 0.3.5
+    fixed cloneIt function in iLGE_2D_Vector2 class
+
 # 0.3.4
     use modern browsers api
 

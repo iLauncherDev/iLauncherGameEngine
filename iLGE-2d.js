@@ -18,6 +18,74 @@ const iLGE_2D_Source_Type_Image = "Image_Source";
 const iLGE_2D_Source_Type_Audio = "Audio_Source";
 const iLGE_2D_Source_Type_RAW = "RAW_Source";
 
+class iLGE_2D_Vector2 {
+    x = 0; y = 0;
+
+    cloneIt() {
+        return new iLGE_2D_Vector2(this.x, this.y);
+    }
+
+    sum(vector) {
+        if (!vector)
+            return this;
+        this.x += vector.x;
+        this.y += vector.y;
+        return this;
+    }
+
+    subtract(vector) {
+        if (!vector)
+            return this;
+        this.x -= vector.x;
+        this.y -= vector.y;
+        return this;
+    }
+
+    multiply(vector) {
+        if (!vector)
+            return this;
+        this.x *= vector.x;
+        this.y *= vector.y;
+        return this;
+    }
+
+    divide(vector) {
+        if (!vector)
+            return this;
+        this.x = vector.x !== 0 ? (this.x / vector.x) : 0;
+        this.y = vector.y !== 0 ? (this.y / vector.y) : 0;
+        return this;
+    }
+
+    magnitude() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    normalize() {
+        let magnitude = this.magnitude();
+        if (!magnitude)
+            return this;
+        this.x /= magnitude;
+        this.y /= magnitude;
+        return this;
+    }
+
+    transform(vector) {
+        if (!vector)
+            return this;
+        const newX = vector.x * this.x - vector.y * this.y;
+        const newY = vector.y * this.x + vector.x * this.y;
+        this.x = newX;
+        this.y = newY;
+        return this;
+    }
+
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
 class iLGE_2D_Source {
     source = 0;
     source_data = [];
@@ -134,74 +202,6 @@ class iLGE_2D_Object_Font {
             this.map[char] = [offset_x, 0];
             offset_x += this.width_array[char];
         }
-    }
-}
-
-class iLGE_2D_Vector2 {
-    x = 0; y = 0;
-
-    cloneIt() {
-        return new iLGE_2D_Vector2(x, y);
-    }
-
-    sum(vector) {
-        if (!vector)
-            return this;
-        this.x += vector.x;
-        this.y += vector.y;
-        return this;
-    }
-
-    subtract(vector) {
-        if (!vector)
-            return this;
-        this.x -= vector.x;
-        this.y -= vector.y;
-        return this;
-    }
-
-    multiply(vector) {
-        if (!vector)
-            return this;
-        this.x *= vector.x;
-        this.y *= vector.y;
-        return this;
-    }
-
-    divide(vector) {
-        if (!vector)
-            return this;
-        this.x = vector.x !== 0 ? (this.x / vector.x) : 0;
-        this.y = vector.y !== 0 ? (this.y / vector.y) : 0;
-        return this;
-    }
-
-    magnitude() {
-        return Math.sqrt(this.x * this.x + this.y * this.y);
-    }
-
-    normalize() {
-        let magnitude = this.magnitude();
-        if (!magnitude)
-            return this;
-        this.x /= magnitude;
-        this.y /= magnitude;
-        return this;
-    }
-
-    transform(vector) {
-        if (!vector)
-            return this;
-        const newX = vector.x * this.x - vector.y * this.y;
-        const newY = vector.y * this.x + vector.x * this.y;
-        this.x = newX;
-        this.y = newY;
-        return this;
-    }
-
-    constructor(x = 0, y = 0) {
-        this.x = x;
-        this.y = y;
     }
 }
 
@@ -1434,8 +1434,6 @@ class iLGE_2D_Engine {
                 tmp_object2.prepareForCollision();
                 if (this.#collision_detection(tmp_object1, tmp_object2)) {
                     if (!element1.blocker && !element1.noclip && element2.blocker) {
-                        object1.x = object1.old_x;
-                        object1.y = object1.old_y;
                         let overlapX = this.#getOverlapX(
                             tmp_object1.vertices,
                             tmp_object2.vertices
