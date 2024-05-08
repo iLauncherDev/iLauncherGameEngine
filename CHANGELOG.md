@@ -1,3 +1,6 @@
+# 0.3.6
+    blurry rectangles fixed in chrome/chromium browsers
+
 # 0.3.5
     fixed cloneIt function in iLGE_2D_Vector2 class
 

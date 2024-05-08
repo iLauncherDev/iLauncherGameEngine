@@ -1048,6 +1048,23 @@ class iLGE_2D_Engine {
         );
     }
 
+    #fillRect(canvas_context, color, x, y, width, height) {
+        if (!this.onepixel_canvas) {
+            this.onepixel_canvas = new OffscreenCanvas(1, 1);
+            this.onepixel_canvas_context = this.onepixel_canvas.getContext("2d");
+        }
+        if (this.onepixel_canvas.width !== 1 || this.onepixel_canvas.height !== 1)
+            this.onepixel_canvas.width = this.onepixel_canvas.height = 1;
+        this.onepixel_canvas_context.fillStyle = color;
+        this.onepixel_canvas_context.fillRect(0, 0, 1, 1);
+        canvas_context.imageSmoothingEnabled = false;
+        canvas_context.drawImage(
+            this.onepixel_canvas,
+            0, 0, 1, 1,
+            x, y, width, height
+        );
+    }
+
     #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color) {
         if (!string || !canvas_context || !font_id)
             return;
@@ -1088,7 +1105,11 @@ class iLGE_2D_Engine {
             );
             font_object.canvas_context.globalCompositeOperation = "source-in";
             font_object.canvas_context.fillStyle = color;
-            font_object.canvas_context.fillRect(0, 0, font_object.canvas.width, font_object.canvas.height);
+            this.#fillRect(
+                font_object.canvas_context, color,
+                0, 0,
+                font_object.canvas.width, font_object.canvas.height
+            );
             this.#drawImage(
                 canvas_context, font_object.canvas,
                 0, 0, font_object.canvas.width, font_object.canvas.height,
@@ -1120,8 +1141,8 @@ class iLGE_2D_Engine {
                                 continue;
                             switch (element.type) {
                                 case iLGE_2D_Object_Element_Type_Rectangle:
-                                    camera.canvas_context.fillStyle = element.color;
-                                    camera.canvas_context.fillRect(
+                                    this.#fillRect(
+                                        camera.canvas_context, element.color,
                                         -object_half_size[0],
                                         -object_half_size[1],
                                         object.width,
@@ -1203,8 +1224,8 @@ class iLGE_2D_Engine {
                 continue;
             switch (element.type) {
                 case iLGE_2D_Object_Element_Type_Rectangle:
-                    camera.canvas_context.fillStyle = element.color;
-                    camera.canvas_context.fillRect(
+                    this.#fillRect(
+                        camera.canvas_context, element.color,
                         0, 0,
                         camera.width, camera.height
                     );
@@ -1347,8 +1368,8 @@ class iLGE_2D_Engine {
                             continue;
                         switch (element.type) {
                             case iLGE_2D_Object_Element_Type_Rectangle:
-                                this.canvas_context.fillStyle = element.color;
-                                this.canvas_context.fillRect(
+                                this.#fillRect(
+                                    this.canvas_context, element.color,
                                     -object_half_size[0],
                                     -object_half_size[1],
                                     object_width,
@@ -1434,19 +1455,13 @@ class iLGE_2D_Engine {
                 tmp_object2.prepareForCollision();
                 if (this.#collision_detection(tmp_object1, tmp_object2)) {
                     if (!element1.blocker && !element1.noclip && element2.blocker) {
-                        let overlapX = this.#getOverlapX(
-                            tmp_object1.vertices,
-                            tmp_object2.vertices
-                        );
-                        let overlapY = this.#getOverlapY(
-                            tmp_object1.vertices,
-                            tmp_object2.vertices
-                        );
+                        let directionX = (object1.x < object2.x) ? -1 : 1;
+                        let directionY = (object1.y < object2.y) ? -1 : 1;
+                        let overlapX = this.#getOverlapX(tmp_object1.vertices, tmp_object2.vertices);
+                        let overlapY = this.#getOverlapY(tmp_object1.vertices, tmp_object2.vertices);
                         if (overlapX < overlapY) {
-                            let directionX = (tmp_object1.x < tmp_object2.x) ? -1 : 1;
                             object1.x += overlapX * directionX;
                         } else {
-                            let directionY = (tmp_object1.y < tmp_object2.y) ? -1 : 1;
                             object1.y += overlapY * directionY;
                         }
                     }
@@ -1668,7 +1683,6 @@ class iLGE_2D_Engine {
             objectY.old_value = clientY;
             objectY.id = id;
             objectY.state = state;
-
         }
     }
 
