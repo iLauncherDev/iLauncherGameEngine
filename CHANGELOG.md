@@ -1,3 +1,6 @@
+# 0.3.7
+    optimized #fillRect function in iLGE_2D_Engine class
+
 # 0.3.6
     blurry rectangles fixed in chrome/chromium browsers
 

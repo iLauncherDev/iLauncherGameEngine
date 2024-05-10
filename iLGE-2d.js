@@ -1049,14 +1049,19 @@ class iLGE_2D_Engine {
     }
 
     #fillRect(canvas_context, color, x, y, width, height) {
+        let isSizeChanged = false;
         if (!this.onepixel_canvas) {
             this.onepixel_canvas = new OffscreenCanvas(1, 1);
             this.onepixel_canvas_context = this.onepixel_canvas.getContext("2d");
         }
-        if (this.onepixel_canvas.width !== 1 || this.onepixel_canvas.height !== 1)
+        if (this.onepixel_canvas.width !== 1 || this.onepixel_canvas.height !== 1) {
             this.onepixel_canvas.width = this.onepixel_canvas.height = 1;
-        this.onepixel_canvas_context.fillStyle = color;
-        this.onepixel_canvas_context.fillRect(0, 0, 1, 1);
+            isSizeChanged = true;
+        }
+        if (this.onepixel_canvas_context.fillStyle !== color || isSizeChanged) {
+            this.onepixel_canvas_context.fillStyle = color;
+            this.onepixel_canvas_context.fillRect(0, 0, 1, 1);
+        }
         canvas_context.imageSmoothingEnabled = false;
         canvas_context.drawImage(
             this.onepixel_canvas,
