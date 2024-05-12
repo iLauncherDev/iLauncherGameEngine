@@ -10,21 +10,20 @@ int main(int argc, char **argv)
 {
     gtk_init(NULL, NULL);
 
-    GtkWidget *window_widget = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    GtkWindow *window = GTK_WINDOW(window_widget);
+    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-    gtk_window_set_title(window, "iLGE Engine");
-    gtk_window_set_default_size(window, 640, 480);
+    gtk_window_set_title(GTK_WINDOW(window), "iLGE Engine");
+    gtk_window_set_default_size(GTK_WINDOW(window), 640, 480);
 
-    g_signal_connect(window_widget, "destroy", G_CALLBACK(destroyWindow), NULL);
+    g_signal_connect(window, "destroy", G_CALLBACK(destroyWindow), NULL);
 
     WebKitWebView *webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
-    gtk_container_add(GTK_CONTAINER(window_widget), GTK_WIDGET(webView));
+    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(webView));
     
     if (argc > 1)
         webkit_web_view_load_uri(webView, argv[1]);
 
-    gtk_widget_show_all(window_widget);
+    gtk_widget_show_all(window);
     gtk_main();
 
     return 0;
