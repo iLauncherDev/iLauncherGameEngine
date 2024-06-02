@@ -1,3 +1,7 @@
+# 0.3.8
+    set imageSmoothingEnabled to false for each frame
+    set onepixel_canvas_context.imageSmoothingEnabled to false when onepixel_canvas is not set or is resized
+
 # 0.3.7
     optimized #fillRect function in iLGE_2D_Engine class
 

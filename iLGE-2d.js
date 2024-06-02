@@ -1053,9 +1053,11 @@ class iLGE_2D_Engine {
         if (!this.onepixel_canvas) {
             this.onepixel_canvas = new OffscreenCanvas(1, 1);
             this.onepixel_canvas_context = this.onepixel_canvas.getContext("2d");
+            this.onepixel_canvas_context.imageSmoothingEnabled = false;
         }
         if (this.onepixel_canvas.width !== 1 || this.onepixel_canvas.height !== 1) {
             this.onepixel_canvas.width = this.onepixel_canvas.height = 1;
+            this.onepixel_canvas_context.imageSmoothingEnabled = false;
             isSizeChanged = true;
         }
         if (this.onepixel_canvas_context.fillStyle !== color || isSizeChanged) {
@@ -1371,6 +1373,7 @@ class iLGE_2D_Engine {
                     for (let element of object.element) {
                         if (!element.visible)
                             continue;
+                        this.canvas_context.imageSmoothingEnabled = false;
                         switch (element.type) {
                             case iLGE_2D_Object_Element_Type_Rectangle:
                                 this.#fillRect(
@@ -1628,7 +1631,6 @@ class iLGE_2D_Engine {
         console.log(`width: ${isThis.width}, height: ${isThis.height};`);
         isThis.canvas.width = isThis.width;
         isThis.canvas.height = isThis.height;
-        isThis.canvas_context.imageSmoothingEnabled = false;
     }
 
     /**
@@ -2062,7 +2064,6 @@ class iLGE_2D_Engine {
         }
         this.width = this.canvas.width;
         this.height = this.canvas.height;
-        this.canvas_context.imageSmoothingEnabled = false;
         if ("getGamepads" in navigator) {
             this.gamepad_supported = true;
             window.addEventListener("gamepadconnected", function (event) {
