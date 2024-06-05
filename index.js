@@ -210,6 +210,7 @@ game.start_function = function (engine) {
                 "PDV437", "PDV437", null, 16, "#000000", true
             )
         );
+        this.game_title.element[0].alignment_center.horizontal = true;
         this.cursor = new iLGE_2D_Object(
             "hud2", "cursor", iLGE_2D_Object_Type_Custom,
             0, 0, 0, 680, 48, 68
@@ -308,8 +309,8 @@ game.start_function = function (engine) {
             engine.title + "\n" +
             eated_walls + "/" + total_walls + " Eated Walls";
         let stamina = this.stamina / this.max_stamina;
-        this.game_title.x = 4 * this.game_title.scale_output;
-        this.game_title.y = this.game_title.x;
+        this.game_title.x = (engine.width - this.game_title.width * this.game_title.scale_output) / 2;
+        this.game_title.y = 4 * this.game_title.scale_output;
         this.stamina_hud_green.width = stamina * this.stamina_hud_red.width;
         this.stamina_hud_red.x = 4 * this.stamina_hud_red.scale_output;
         this.stamina_hud_green.x = this.stamina_hud_red.x;
@@ -318,7 +319,7 @@ game.start_function = function (engine) {
             - 4 * this.stamina_hud_red.scale_output;
         this.stamina_hud_green.y = this.stamina_hud_red.y;
         this.stamina_level.element[0].string = "Stamina " + Math.floor(stamina * 100) + "%";
-        this.stamina_level.width = this.stamina_level.element[0].string.length * 9;
+        this.stamina_level.width = this.stamina_level.element[0].string.length * 9 + 1;
         this.stamina_level.y =
             this.stamina_hud_red.y - this.stamina_level.height * this.stamina_level.scale_output;
         this.stamina_level.x =

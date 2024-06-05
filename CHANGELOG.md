@@ -1,3 +1,6 @@
+# 0.3.9
+    added text alignment for vertical and horizontal
+
 # 0.3.8
     set imageSmoothingEnabled to false for each frame
     set onepixel_canvas_context.imageSmoothingEnabled to false when onepixel_canvas is not set or is resized

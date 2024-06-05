@@ -248,6 +248,7 @@ class iLGE_2D_Object_Element_Text {
     px = 0;
     color = "#000000";
     visible = true;
+    alignment_center = { vertical: false, horizontal: false };
     constructor(font_id, id, string, px, color, visible) {
         this.font_id = font_id;
         this.id = id;
@@ -1072,57 +1073,104 @@ class iLGE_2D_Engine {
         );
     }
 
-    #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color) {
+    #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color, v_center, h_center) {
         if (!string || !canvas_context || !font_id)
             return;
+
         let font_object = this.#find_font(font_id);
         if (!font_object)
             return;
+
         font_object.canvas.height = font_object.height;
         const font_scale = font_object.height / px;
-        const font_height = Math.round(font_object.height / font_scale);
+        const font_height = font_object.height / font_scale;
+
         if (y + px > max_height)
             return;
-        let font_x_pos = 0;
-        let font_y_pos = 0;
-        for (let i = 0; i < string.length; i++) {
-            let char = string.charAt(i);
-            switch (char) {
-                case '\n':
-                    font_x_pos = 0;
-                    font_y_pos += font_height;
+
+        const splitLine = (line) => {
+            let line_width = 0;
+            let splitLines = [];
+            let currentLine = '';
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line.charAt(i);
+                if (!font_object.width_array[char] || !font_object.map[char])
                     continue;
+
+                const char_width = font_object.width_array[char] / font_scale;
+                if (line_width + char_width > max_width) {
+                    splitLines.push(currentLine);
+                    currentLine = char;
+                    line_width = char_width;
+                } else {
+                    currentLine += char;
+                    line_width += char_width;
+                }
             }
-            if (!font_object.width_array[char] || !font_object.map[char])
-                continue;
-            const font_width = Math.round(font_object.width_array[char] / font_scale);
-            if (x + font_x_pos >= max_width) {
-                font_x_pos = 0;
-                font_y_pos += font_height;
+            if (currentLine)
+                splitLines.push(currentLine);
+            return splitLines;
+        };
+
+        const lines = string.split('\n').flatMap(line => splitLine(line));
+
+        const total_text_height = lines.length * font_height;
+        let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
+            let font_aux_x = 0;
+
+            if (h_center) {
+                const line_width = line.split('').reduce((acc, char) => {
+                    if (font_object.width_array[char])
+                        return acc + font_object.width_array[char] / font_scale;
+                    return acc;
+                }, 0);
+                font_aux_x = (max_width - line_width) / 2;
             }
-            if (y + font_y_pos >= max_height)
-                break;
-            font_object.canvas.width = font_object.width_array[char];
-            this.#drawImage(
-                font_object.canvas_context, font_object.image,
-                font_object.map[char][0], font_object.map[char][1],
-                font_object.canvas.width, font_object.canvas.height,
-                0, 0,
-                font_object.canvas.width, font_object.canvas.height
-            );
-            font_object.canvas_context.globalCompositeOperation = "source-in";
-            font_object.canvas_context.fillStyle = color;
-            this.#fillRect(
-                font_object.canvas_context, color,
-                0, 0,
-                font_object.canvas.width, font_object.canvas.height
-            );
-            this.#drawImage(
-                canvas_context, font_object.canvas,
-                0, 0, font_object.canvas.width, font_object.canvas.height,
-                x + font_x_pos, y + font_y_pos, font_width, font_height
-            );
-            font_x_pos += font_width;
+
+            let font_x_pos = 0;
+            let font_y_pos = lineIndex * font_height;
+
+            for (let i = 0; i < line.length; i++) {
+                let char = line.charAt(i);
+                if (!font_object.width_array[char] || !font_object.map[char])
+                    continue;
+
+                const font_width = font_object.width_array[char] / font_scale;
+
+                if (font_y_pos >= max_height)
+                    break;
+
+                font_object.canvas.width = font_object.width_array[char];
+
+                this.#drawImage(
+                    font_object.canvas_context, font_object.image,
+                    font_object.map[char][0], font_object.map[char][1],
+                    font_object.canvas.width, font_object.canvas.height,
+                    0, 0,
+                    font_object.canvas.width, font_object.canvas.height
+                );
+
+                font_object.canvas_context.globalCompositeOperation = "source-in";
+                font_object.canvas_context.fillStyle = color;
+
+                this.#fillRect(
+                    font_object.canvas_context, color,
+                    0, 0,
+                    font_object.canvas.width, font_object.canvas.height
+                );
+
+                this.#drawImage(
+                    canvas_context, font_object.canvas,
+                    0, 0, font_object.canvas.width, font_object.canvas.height,
+                    x + font_x_pos + font_aux_x, y + font_y_pos + font_aux_y, font_width, font_height
+                );
+
+                font_x_pos += font_width;
+            }
         }
     }
 
@@ -1175,7 +1223,9 @@ class iLGE_2D_Engine {
                                         element.font_id,
                                         -object_half_size[0],
                                         -object_half_size[1],
-                                        element.px, element.color
+                                        element.px, element.color,
+                                        element.alignment_center.vertical,
+                                        element.alignment_center.horizontal
                                     );
                                     break;
                             }
@@ -1398,12 +1448,14 @@ class iLGE_2D_Engine {
                             case iLGE_2D_Object_Element_Type_Text:
                                 this.#drawText(
                                     element.string, this.canvas_context,
-                                    object_half_size[0],
-                                    object_half_size[1],
+                                    object_width,
+                                    object_height,
                                     element.font_id,
                                     -object_half_size[0],
                                     -object_half_size[1],
-                                    element.px * object_scale, element.color
+                                    element.px * object_scale, element.color,
+                                    element.alignment_center.vertical,
+                                    element.alignment_center.horizontal
                                 );
                                 break;
                             case iLGE_2D_Object_Element_Type_Camera_Viewer:
