@@ -248,6 +248,7 @@ class iLGE_2D_Object_Element_Text {
     px = 0;
     color = "#000000";
     visible = true;
+    styled_text = false;
     alignment_center = { vertical: false, horizontal: false };
     constructor(font_id, id, string, px, color, visible) {
         this.font_id = font_id;
@@ -1073,6 +1074,190 @@ class iLGE_2D_Engine {
         );
     }
 
+    #drawTextWithStyles(string, canvas_context, max_width, max_height, font_id, x, y, px, color, v_center, h_center) {
+        if (!string || !canvas_context || !font_id)
+            return;
+
+        let font_object = this.#find_font(font_id);
+        if (!font_object)
+            return;
+
+        font_object.canvas.height = font_object.height;
+        const font_scale = font_object.height / px;
+        const font_height = font_object.height / font_scale;
+
+        if (y + px > max_height)
+            return;
+
+        const splitLine = (line) => {
+            let parts = [];
+            let currentPart = { string: '', color: color };
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line.charAt(i);
+
+                if (char === '<') {
+                    let endIndex = line.indexOf('>', i);
+                    if (endIndex !== -1) {
+                        if (line.startsWith('<color=', i)) {
+                            let cache0 = line.indexOf('=', i) + 1,
+                                cache1 = line.indexOf('<', endIndex) - 1,
+                                cache2 = line.indexOf('>', endIndex + 1);
+                            const colorValue = line.substr(cache0, endIndex - cache0);
+                            const colorString = line.substr(
+                                endIndex + 1,
+                                cache1 - endIndex);
+                            parts.push(currentPart);
+                            currentPart = { string: '', color: color };
+                            currentPart.string = colorString;
+                            currentPart.color = colorValue;
+                            parts.push(currentPart);
+                            currentPart = { string: '', color: color };
+
+                            i = cache2;
+                            continue;
+                        }
+                    }
+                }
+
+                currentPart.string += char;
+            }
+
+            parts.push(currentPart);
+
+            return parts;
+        };
+
+        const _splitLine = (line) => {
+            let line_width = 0;
+            let splitLines = [];
+            let currentLine = '';
+            let currentColor = color;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line.charAt(i);
+                let char_width = 0;
+
+                if (char === '<') {
+                    let endIndex = line.indexOf('>', i);
+                    if (endIndex !== -1 && line.startsWith('<color=', i)) {
+                        let closeTagIndex = line.indexOf('</color>', endIndex);
+                        if (closeTagIndex !== -1) {
+                            const tagContent = line.substring(i, closeTagIndex + 8);
+                            const tagLength = tagContent.length;
+
+                            for (let j = 0; j < tagLength; j++) {
+                                const tagChar = tagContent.charAt(j);
+                                if (font_object.width_array[tagChar])
+                                    char_width = font_object.width_array[tagChar] / font_scale;
+                                line_width += char_width;
+                            }
+
+                            if (line_width > max_width) {
+                                splitLines.push(currentLine);
+                                currentLine = '';
+                                line_width = 0;
+                            }
+
+                            currentLine += tagContent;
+                            line_width += char_width * tagLength;
+
+                            i = closeTagIndex + 7;
+                            continue;
+                        }
+                    }
+                }
+
+                if (font_object.width_array[char])
+                    char_width = font_object.width_array[char] / font_scale;
+
+                if (line_width + char_width > max_width || char === '\n') {
+                    splitLines.push(currentLine);
+                    currentLine = '';
+                    line_width = 0;
+                }
+
+                currentLine += char;
+                line_width += char_width;
+            }
+
+            if (currentLine)
+                splitLines.push(currentLine);
+
+            return splitLines;
+        };
+
+        const lines = _splitLine(string);
+
+        const total_text_height = lines.length * font_height;
+        let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const parts = splitLine(lines[lineIndex]);
+            let font_aux_x = 0;
+
+            if (h_center) {
+                let line_width = 0;
+                for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+                    const part = parts[partIndex];
+                    for (let index = 0; index < part.string.length; index++) {
+                        let char = part.string.charAt(index);
+                        if (!font_object.width_array[char] || !font_object.map[char])
+                            continue;
+                        const font_width = font_object.width_array[char] / font_scale;
+                        if (line_width + font_width >= max_width)
+                            break;
+                        line_width += font_width;
+                    }
+                }
+                font_aux_x = (max_width - line_width) / 2;
+            }
+
+            let font_x_pos = 0;
+            let font_y_pos = lineIndex * font_height;
+
+            for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+                const part = parts[partIndex];
+                for (let i = 0; i < part.string.length; i++) {
+                    let char = part.string.charAt(i);
+                    if (!font_object.width_array[char] || !font_object.map[char])
+                        continue;
+
+                    const font_width = font_object.width_array[char] / font_scale;
+
+                    if (font_y_pos >= max_height)
+                        break;
+
+                    font_object.canvas.width = font_object.width_array[char];
+
+                    this.#drawImage(
+                        font_object.canvas_context, font_object.image,
+                        font_object.map[char][0], font_object.map[char][1],
+                        font_object.canvas.width, font_object.canvas.height,
+                        0, 0,
+                        font_object.canvas.width, font_object.canvas.height
+                    );
+
+                    font_object.canvas_context.globalCompositeOperation = "source-in";
+
+                    this.#fillRect(
+                        font_object.canvas_context, part.color,
+                        0, 0,
+                        font_object.canvas.width, font_object.canvas.height
+                    );
+
+                    this.#drawImage(
+                        canvas_context, font_object.canvas,
+                        0, 0, font_object.canvas.width, font_object.canvas.height,
+                        x + font_aux_x + font_x_pos, y + font_aux_y + font_y_pos, font_width, font_height
+                    );
+
+                    font_x_pos += font_width;
+                }
+            }
+        }
+    }
+
     #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color, v_center, h_center) {
         if (!string || !canvas_context || !font_id)
             return;
@@ -1095,11 +1280,12 @@ class iLGE_2D_Engine {
 
             for (let i = 0; i < line.length; i++) {
                 const char = line.charAt(i);
-                if (!font_object.width_array[char] || !font_object.map[char])
-                    continue;
+                let char_width = 0;
 
-                const char_width = font_object.width_array[char] / font_scale;
-                if (line_width + char_width > max_width) {
+                if (font_object.width_array[char])
+                    char_width = font_object.width_array[char] / font_scale;
+
+                if (line_width + char_width > max_width || char === '\n') {
                     splitLines.push(currentLine);
                     currentLine = char;
                     line_width = char_width;
@@ -1108,12 +1294,14 @@ class iLGE_2D_Engine {
                     line_width += char_width;
                 }
             }
+
             if (currentLine)
                 splitLines.push(currentLine);
+
             return splitLines;
         };
 
-        const lines = string.split('\n').flatMap(line => splitLine(line));
+        const lines = splitLine(string);
 
         const total_text_height = lines.length * font_height;
         let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
@@ -1155,7 +1343,6 @@ class iLGE_2D_Engine {
                 );
 
                 font_object.canvas_context.globalCompositeOperation = "source-in";
-                font_object.canvas_context.fillStyle = color;
 
                 this.#fillRect(
                     font_object.canvas_context, color,
@@ -1216,17 +1403,30 @@ class iLGE_2D_Engine {
                                     );
                                     break;
                                 case iLGE_2D_Object_Element_Type_Text:
-                                    this.#drawText(
-                                        element.string, camera.canvas_context,
-                                        object_half_size[0],
-                                        object_half_size[1],
-                                        element.font_id,
-                                        -object_half_size[0],
-                                        -object_half_size[1],
-                                        element.px, element.color,
-                                        element.alignment_center.vertical,
-                                        element.alignment_center.horizontal
-                                    );
+                                    if (element.styled_text)
+                                        this.#drawTextWithStyles(
+                                            element.string, camera.canvas_context,
+                                            object.width,
+                                            object.height,
+                                            element.font_id,
+                                            -object_half_size[0],
+                                            -object_half_size[1],
+                                            element.px, element.color,
+                                            element.alignment_center.vertical,
+                                            element.alignment_center.horizontal
+                                        );
+                                    else
+                                        this.#drawText(
+                                            element.string, camera.canvas_context,
+                                            object.width,
+                                            object.height,
+                                            element.font_id,
+                                            -object_half_size[0],
+                                            -object_half_size[1],
+                                            element.px, element.color,
+                                            element.alignment_center.vertical,
+                                            element.alignment_center.horizontal
+                                        );
                                     break;
                             }
                         }
@@ -1446,17 +1646,30 @@ class iLGE_2D_Engine {
                                 );
                                 break;
                             case iLGE_2D_Object_Element_Type_Text:
-                                this.#drawText(
-                                    element.string, this.canvas_context,
-                                    object_width,
-                                    object_height,
-                                    element.font_id,
-                                    -object_half_size[0],
-                                    -object_half_size[1],
-                                    element.px * object_scale, element.color,
-                                    element.alignment_center.vertical,
-                                    element.alignment_center.horizontal
-                                );
+                                if (element.styled_text)
+                                    this.#drawTextWithStyles(
+                                        element.string, this.canvas_context,
+                                        object_width,
+                                        object_height,
+                                        element.font_id,
+                                        -object_half_size[0],
+                                        -object_half_size[1],
+                                        element.px * object_scale, element.color,
+                                        element.alignment_center.vertical,
+                                        element.alignment_center.horizontal
+                                    );
+                                else
+                                    this.#drawText(
+                                        element.string, this.canvas_context,
+                                        object_width,
+                                        object_height,
+                                        element.font_id,
+                                        -object_half_size[0],
+                                        -object_half_size[1],
+                                        element.px * object_scale, element.color,
+                                        element.alignment_center.vertical,
+                                        element.alignment_center.horizontal
+                                    );
                                 break;
                             case iLGE_2D_Object_Element_Type_Camera_Viewer:
                                 this.#draw_camera(

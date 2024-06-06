@@ -211,6 +211,7 @@ game.start_function = function (engine) {
             )
         );
         this.game_title.element[0].alignment_center.horizontal = true;
+        this.game_title.element[0].styled_text = true;
         this.cursor = new iLGE_2D_Object(
             "hud2", "cursor", iLGE_2D_Object_Type_Custom,
             0, 0, 0, 680, 48, 68
@@ -305,7 +306,7 @@ game.start_function = function (engine) {
         }
         this.cursor_update(engine, movementX, movementY, true);
         this.game_title.element[0].string =
-            engine.fps + " FPS\n" +
+            engine.fps + " <color=red>FPS</color>\n" +
             engine.title + "\n" +
             eated_walls + "/" + total_walls + " Eated Walls";
         let stamina = this.stamina / this.max_stamina;

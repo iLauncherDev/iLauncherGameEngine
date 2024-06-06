@@ -1,3 +1,7 @@
+# 0.3.10
+    added styled text support
+    fixed #drawText function in iLGE_2D_Engine class
+
 # 0.3.9
     added text alignment for vertical and horizontal
 
