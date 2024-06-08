@@ -1549,7 +1549,10 @@ class iLGE_2D_Engine {
             return null;
         if (!effect_spritesheet.canvas) {
             effect_spritesheet.canvas = document.createElement("canvas");
-            effect_spritesheet.canvas_context = effect_spritesheet.canvas.getContext("2d");
+            effect_spritesheet.canvas_context = effect_spritesheet.canvas.getContext(
+                "2d",
+                { willReadFrequently: true }
+            );
             effect_spritesheet.max_index = effect_spritesheet.width / effect_size;
         }
         effect_size = Math.floor(effect_size);
@@ -2053,10 +2056,16 @@ class iLGE_2D_Engine {
                 isThis.#controls[mouse_clientY_string + "_Positive"] = clientY;
                 isThis.#controls[mouse_clientX_string + "_Negative"] = -clientX;
                 isThis.#controls[mouse_clientY_string + "_Negative"] = -clientY;
-                isThis.#controls[mouse_movementX_string + "_Positive"] = movementX;
-                isThis.#controls[mouse_movementY_string + "_Positive"] = movementY;
-                isThis.#controls[mouse_movementX_string + "_Negative"] = -movementX;
-                isThis.#controls[mouse_movementY_string + "_Negative"] = -movementY;
+                if (!isThis.#controls[mouse_movementX_string + "_Positive"])
+                    isThis.#controls[mouse_movementX_string + "_Positive"] =
+                        isThis.#controls[mouse_movementX_string + "_Negative"] = 0;
+                if (!isThis.#controls[mouse_movementY_string + "_Positive"])
+                    isThis.#controls[mouse_movementY_string + "_Positive"] =
+                        isThis.#controls[mouse_movementY_string + "_Negative"] = 0;
+                isThis.#controls[mouse_movementX_string + "_Positive"] += movementX;
+                isThis.#controls[mouse_movementY_string + "_Positive"] += movementY;
+                isThis.#controls[mouse_movementX_string + "_Negative"] += -movementX;
+                isThis.#controls[mouse_movementY_string + "_Negative"] += -movementY;
                 break;
             case "ContextMenu":
                 event.preventDefault();
@@ -2353,7 +2362,10 @@ class iLGE_2D_Engine {
         this.gameid = gameid;
         this.start = this.start.bind(isThis);
         this.canvas = document.createElement("canvas");
-        this.canvas_context = this.canvas.getContext("2d");
+        this.canvas_context = this.canvas.getContext(
+            "2d",
+            { willReadFrequently: true }
+        );
         this.canvas.width = width;
         this.canvas.height = height;
         if (auto_resize)

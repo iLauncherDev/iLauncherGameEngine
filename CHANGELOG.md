@@ -1,3 +1,7 @@
+# 0.3.12
+    mouse movement is delta now
+    added {willReadFrequently: true} in some contexts
+
 # 0.3.11
     added fps control
     fixed #check_object_collision in iLGE_2D_Engine class
