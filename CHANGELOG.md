@@ -1,3 +1,8 @@
+# 0.3.11
+    added fps control
+    fixed #check_object_collision in iLGE_2D_Engine
+    fixed #drawTextWithStyles in iLGE_2D_Engine class
+
 # 0.3.10
     added styled text support
     fixed #drawText function in iLGE_2D_Engine class

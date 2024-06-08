@@ -502,6 +502,7 @@ class iLGE_2D_Object {
     old_x = 0;
     old_y = 0;
     rotation = 0;
+    old_rotation = 0;
     scale = 0;
     scale_output = 0;
     width = 0;
@@ -676,6 +677,7 @@ class iLGE_2D_Engine {
 
     deltaTime = 0;
     fps = 0;
+    fps_limit = 0;
 
     #time_new = 0;
     #time_old = 0;
@@ -973,22 +975,34 @@ class iLGE_2D_Engine {
         this.control_map_load();
     }
 
-    #getOverlapX(vertices1, vertices2) {
+    #getOverlaps(vertices1, vertices2) {
         let minX1 = Math.min(...vertices1.map(vertex => vertex.x));
         let maxX1 = Math.max(...vertices1.map(vertex => vertex.x));
         let minX2 = Math.min(...vertices2.map(vertex => vertex.x));
         let maxX2 = Math.max(...vertices2.map(vertex => vertex.x));
-        let overlapX = Math.max(0, Math.min(maxX1, maxX2) - Math.max(minX1, minX2));
-        return overlapX;
-    }
 
-    #getOverlapY(vertices1, vertices2) {
         let minY1 = Math.min(...vertices1.map(vertex => vertex.y));
         let maxY1 = Math.max(...vertices1.map(vertex => vertex.y));
         let minY2 = Math.min(...vertices2.map(vertex => vertex.y));
         let maxY2 = Math.max(...vertices2.map(vertex => vertex.y));
-        let overlapY = Math.max(0, Math.min(maxY1, maxY2) - Math.max(minY1, minY2));
-        return overlapY;
+
+        let overlapX = 0;
+        if (minX1 < maxX2 && maxX1 > minX2) {
+            overlapX = Math.min(maxX1, maxX2) - Math.max(minX1, minX2);
+            if (minX1 > minX2) {
+                overlapX = -overlapX;
+            }
+        }
+
+        let overlapY = 0;
+        if (minY1 < maxY2 && maxY1 > minY2) {
+            overlapY = Math.min(maxY1, maxY2) - Math.max(minY1, minY2);
+            if (minY1 > minY2) {
+                overlapY = -overlapY;
+            }
+        }
+
+        return { x: overlapX, y: overlapY };
     }
 
 
@@ -1144,13 +1158,14 @@ class iLGE_2D_Engine {
                         let closeTagIndex = line.indexOf('</color>', endIndex);
                         if (closeTagIndex !== -1) {
                             const tagContent = line.substring(i, closeTagIndex + 8);
-                            const tagLength = tagContent.length;
+                            let tagWidth = 0;
 
-                            for (let j = 0; j < tagLength; j++) {
-                                const tagChar = tagContent.charAt(j);
+                            for (let j = endIndex + 1; j < closeTagIndex; j++) {
+                                const tagChar = line.charAt(j);
                                 if (font_object.width_array[tagChar])
                                     char_width = font_object.width_array[tagChar] / font_scale;
                                 line_width += char_width;
+                                tagWidth += char_width;
                             }
 
                             if (line_width > max_width) {
@@ -1160,7 +1175,7 @@ class iLGE_2D_Engine {
                             }
 
                             currentLine += tagContent;
-                            line_width += char_width * tagLength;
+                            line_width += tagWidth;
 
                             i = closeTagIndex + 7;
                             continue;
@@ -1716,6 +1731,13 @@ class iLGE_2D_Engine {
         }
     }
 
+    /**
+     * 
+     * @param {iLGE_2D_Object} tmp_object1 
+     * @param {iLGE_2D_Object_Element_Collider} element1 
+     * @param {iLGE_2D_Object} object1 
+     * @param {iLGE_2D_Object} object2 
+     */
     #check_object_collision(tmp_object1, element1, object1, object2) {
         for (let element2 of object2.element) {
             if (element2.type === iLGE_2D_Object_Element_Type_Collider) {
@@ -1728,15 +1750,12 @@ class iLGE_2D_Engine {
                 tmp_object2.prepareForCollision();
                 if (this.#collision_detection(tmp_object1, tmp_object2)) {
                     if (!element1.blocker && !element1.noclip && element2.blocker) {
-                        let directionX = (object1.x < object2.x) ? -1 : 1;
-                        let directionY = (object1.y < object2.y) ? -1 : 1;
-                        let overlapX = this.#getOverlapX(tmp_object1.vertices, tmp_object2.vertices);
-                        let overlapY = this.#getOverlapY(tmp_object1.vertices, tmp_object2.vertices);
-                        if (overlapX < overlapY) {
-                            object1.x += overlapX * directionX;
-                        } else {
-                            object1.y += overlapY * directionY;
-                        }
+                        const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
+
+                        if (Math.abs(overlap.x) < Math.abs(overlap.y))
+                            object1.x -= overlap.x;
+                        else
+                            object1.y -= overlap.y;
                     }
                     this.#smartPush(element1.collided_objects, object2);
                     this.#smartPush(element2.collided_objects, object1);
@@ -1794,6 +1813,7 @@ class iLGE_2D_Engine {
                 object.scene = scene;
                 object.old_x = object.x;
                 object.old_y = object.y;
+                object.old_rotation = object.rotation;
                 if (object.start_function && object.reset) {
                     object.start_function(this);
                     object.reset = false;
@@ -1878,9 +1898,24 @@ class iLGE_2D_Engine {
         this.#draw();
         this.#time_new = this.#getTime();
         this.#time_diff = this.#time_new - this.#time_old;
-        this.deltaTime = this.#time_diff / (1000 / 60);
-        this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
-        this.#requestAnimationFrame(this.start);
+        if (this.fps_limit > 0) {
+            let timeout = (1000 / this.fps_limit) - this.#time_diff;
+            if (timeout < 0)
+                timeout = 0;
+            let isThis = this;
+            setTimeout(function () {
+                isThis.#time_new = isThis.#getTime();
+                isThis.#time_diff = isThis.#time_new - isThis.#time_old;
+                isThis.deltaTime = isThis.#time_diff / (1000 / 60);
+                isThis.fps = Math.round(1000 / (isThis.#time_diff ? isThis.#time_diff : 1));
+                isThis.#requestAnimationFrame(isThis.start);
+            }, timeout);
+        }
+        else {
+            this.deltaTime = this.#time_diff / (1000 / 60);
+            this.fps = Math.round(1000 / (this.#time_diff ? this.#time_diff : 1));
+            this.#requestAnimationFrame(this.start);
+        }
     }
 
     /**
