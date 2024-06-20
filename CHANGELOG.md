@@ -1,3 +1,6 @@
+# 0.3.13
+    fixed keyboard_handler in iLGE_2D_Engine class
+
 # 0.3.12
     mouse movement is delta now
     added {willReadFrequently: true} in some contexts

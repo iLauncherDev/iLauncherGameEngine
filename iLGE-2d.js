@@ -215,7 +215,7 @@ class iLGE_2D_Object_Element_Sprite {
     src_height = 0;
     constructor(source_object, id, visible, src_x, src_y, src_width, src_height) {
         let image_object = null;
-        if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
+        if (!source_object || !source_object.compareSourceType(iLGE_2D_Source_Type_Image))
             return;
         image_object = source_object.source;
         this.id = id;
@@ -2097,9 +2097,9 @@ class iLGE_2D_Engine {
         const keyborad_which_tag = "Keyboard_Which";
         const keyborad_key_tag = "Keyboard_Key";
         const keyboard_code_key = keyborad_code_tag + "_" + event.code;
-        const keyboard_keycode_key = keyborad_keycode_tag + "_" + event.code;
-        const keyboard_which_key = keyborad_which_tag + "_" + event.code;
-        const keyboard_key_key = keyborad_key_tag + "_" + event.code;
+        const keyboard_keycode_key = keyborad_keycode_tag + "_" + event.keyCode;
+        const keyboard_which_key = keyborad_which_tag + "_" + event.which;
+        const keyboard_key_key = keyborad_key_tag + "_" + event.key;
         if (!isThis.#controls[keyborad_code_tag + "_Toggled"])
             isThis.#controls[keyborad_code_tag + "_Toggled"] = [];
         if (!isThis.#controls[keyborad_keycode_tag + "_Toggled"])
