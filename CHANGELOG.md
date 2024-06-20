@@ -1,3 +1,7 @@
+# 0.3.14
+    added getStringSize function in iLGE_2D_Object_Font class
+    added "enabled" boolean in iLGE_2D_Object class
+
 # 0.3.13
     fixed keyboard_handler in iLGE_2D_Engine class
 

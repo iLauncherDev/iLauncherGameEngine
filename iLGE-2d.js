@@ -170,7 +170,58 @@ class iLGE_2D_Object_Font {
     width_array = [];
     width = 0;
     height = 0;
-    map = {};
+    map = [];
+
+    /**
+    * 
+    * @param {String} string 
+    * @param {Number} px 
+    * @param {Number} max_width
+    * @param {Number} max_height
+    * @returns {Object} size - { width: Number, height: Number }
+    */
+    getStringSize(string, px, max_width, max_height) {
+        let size = { width: 0, height: 0 };
+        if (!string || !this.width_array.length)
+            return size;
+
+        const font_scale = this.height / px;
+        const font_height = this.height / font_scale;
+        let current_line_width = 0;
+        let total_height = font_height;
+
+        for (let i = 0; i < string.length; i++) {
+            const char = string.charAt(i);
+            const char_width = this.width_array[char] / font_scale;
+
+            if (char === '\n') {
+                size.width = Math.max(size.width, current_line_width);
+                current_line_width = 0;
+                total_height += font_height;
+                if (total_height > max_height) {
+                    break;
+                }
+                continue;
+            }
+
+            if (current_line_width + char_width > max_width) {
+                size.width = Math.max(size.width, current_line_width);
+                current_line_width = char_width;
+                total_height += font_height;
+                if (total_height > max_height) {
+                    break;
+                }
+            } else {
+                current_line_width += char_width;
+            }
+        }
+
+        size.width = Math.max(size.width, current_line_width);
+        size.height = total_height;
+
+        return size;
+    }
+
     constructor(source_object, id, fontwidth, fontheight, fontmap) {
         let image_object = null;
         if (!source_object.compareSourceType(iLGE_2D_Source_Type_Image))
@@ -195,7 +246,6 @@ class iLGE_2D_Object_Font {
                 break;
         }
         this.height = fontheight;
-        this.map = [];
         let offset_x = 0;
         for (let i = 0; i < fontmap.length; i++) {
             let char = fontmap.charAt(i);
@@ -206,6 +256,7 @@ class iLGE_2D_Object_Font {
 }
 
 class iLGE_2D_Object_Element_Sprite {
+    image = 0;
     type = iLGE_2D_Object_Element_Type_Sprite;
     id = "OBJID";
     visible = true;
@@ -495,6 +546,7 @@ class iLGE_2D_Object {
     scene = 0;
     priority = 0;
     delay = 0;
+    enabled = true;
 
     x = 0;
     y = 0;
@@ -1821,7 +1873,7 @@ class iLGE_2D_Engine {
                     object.start_function(this);
                     object.reset = false;
                 }
-                if (object.update_function)
+                if (object.update_function && object.enabled)
                     object.update_function(this);
                 switch (object.type) {
                     case iLGE_2D_Object_Type_Custom:
