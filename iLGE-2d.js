@@ -1108,6 +1108,8 @@ class iLGE_2D_Engine {
     }
 
     #drawImage(canvas_context, image, sx, sy, swidth, sheight, dx, dy, width, height) {
+        if (!image)
+            return;
         canvas_context.imageSmoothingEnabled = false;
         canvas_context.drawImage(
             image,
@@ -1593,73 +1595,90 @@ class iLGE_2D_Engine {
         );
     }
 
+    /**
+     * 
+     * @param {OffscreenCanvas} newframe 
+     * @param {OffscreenCanvas} oldframe 
+     * @param {Number} dx 
+     * @param {Number} dy 
+     * @param {Number} dwidth 
+     * @param {Number} dheight 
+     * @param {Number} effect_spritesheet 
+     * @param {Number} effect_size 
+     * @param {Number} effect_scale 
+     * @param {Number} effect_sprite_index 
+     * @returns {OffscreenCanvas}
+     */
     #applyTransitionEffect(
         newframe, oldframe, dx, dy, dwidth, dheight,
-        effect_spritesheet, effect_size, effect_sprite_index
+        effect_spritesheet, effect_size, effect_scale, effect_sprite_index
     ) {
         if (!newframe || !effect_spritesheet || !effect_size)
             return null;
-        if (!effect_spritesheet.canvas) {
-            effect_spritesheet.canvas = document.createElement("canvas");
-            effect_spritesheet.canvas_context = effect_spritesheet.canvas.getContext(
-                "2d",
-                { willReadFrequently: true }
+
+        if (!effect_spritesheet.effectCache) {
+            effect_spritesheet.effectCache = {
+                canvas: new OffscreenCanvas(1, 1),
+                context: null,
+                maxIndex: effect_spritesheet.width / effect_size
+            };
+            effect_spritesheet.effectCache.context = effect_spritesheet.effectCache.canvas.getContext(
+                "2d", { willReadFrequently: true }
             );
-            effect_spritesheet.max_index = effect_spritesheet.width / effect_size;
         }
+
+        const cache = effect_spritesheet.effectCache;
+
         effect_size = Math.floor(effect_size);
-        effect_sprite_index = Math.floor(effect_sprite_index);
-        if (effect_sprite_index >= effect_spritesheet.max_index)
-            effect_sprite_index = effect_spritesheet.max_index - 1;
-        else if (effect_sprite_index <= 0)
-            effect_sprite_index = 0;
-        effect_spritesheet.canvas_context.drawImage(
+        effect_sprite_index = Math.min(Math.max(0, Math.floor(effect_sprite_index)), cache.maxIndex - 1);
+
+        let _effect_size = Math.max(effect_size, effect_size * effect_scale);
+        cache.canvas.width = cache.canvas.height = _effect_size;
+        this.#drawImage(
+            cache.context,
             effect_spritesheet,
             effect_size * effect_sprite_index, 0,
             effect_size, effect_size,
-            0, 0, effect_size, effect_size
-        );
-        effect_spritesheet.width = effect_size;
-        effect_spritesheet.height = effect_size;
-        let effect_spritesheet_data = effect_spritesheet.canvas_context.getImageData(
             0, 0,
-            effect_size, effect_size
-        ).data;
-        let effect_frame = new ImageData(dwidth, dheight);
-        let is_different = newframe !== oldframe && oldframe ? true : false;
-        let precalc_pos = [];
-        let _x = 0, _y = 0;
-        for (let y = 0; y < dheight; y++) {
-            if (_y > effect_size)
-                _y = 0;
-            precalc_pos[y] = [];
-            for (let x = 0; x < dwidth; x++) {
-                if (_x > effect_size)
-                    _x = 0;
-                precalc_pos[y][x] = (_y * effect_size + _x) * 4;
-                _x++;
-            }
-            _y++;
+            cache.canvas.width, cache.canvas.height
+        );
+
+        const effect_frame = new OffscreenCanvas(dwidth, dheight);
+        const effect_frame_context = effect_frame.getContext("2d");
+
+        if (oldframe)
+            effect_frame_context.drawImage(
+                oldframe,
+                dx, dy,
+                effect_frame.width, effect_frame.height,
+                0, 0,
+                effect_frame.width, effect_frame.height
+            );
+
+        const pattern = effect_frame_context.createPattern(cache.canvas, "repeat");
+        effect_frame_context.fillStyle = pattern;
+        effect_frame_context.fillRect(0, 0, effect_frame.width, effect_frame.height);
+
+        if (newframe) {
+            const tmp_canvas = new OffscreenCanvas(effect_frame.width, effect_frame.height);
+            const tmp_context = tmp_canvas.getContext("2d");
+
+            tmp_context.fillStyle = pattern;
+            tmp_context.fillRect(0, 0, tmp_canvas.width, tmp_canvas.height);
+
+            tmp_context.globalCompositeOperation = "source-in";
+
+            tmp_context.drawImage(newframe, 0, 0);
+
+            effect_frame_context.drawImage(
+                tmp_canvas,
+                dx, dy,
+                effect_frame.width, effect_frame.height,
+                0, 0,
+                effect_frame.width, effect_frame.height
+            );
         }
-        for (let y = 0; y < dheight; y++) {
-            let effect_frame_index = y * effect_frame.width * 4;
-            let frame_index = ((y + dy) * newframe.width + dx) * 4;
-            for (let x = 0; x < dwidth; x++) {
-                let effect_spritesheet_data_index = precalc_pos[y][x];
-                if (effect_spritesheet_data[effect_spritesheet_data_index + 0] +
-                    effect_spritesheet_data[effect_spritesheet_data_index + 1] +
-                    effect_spritesheet_data[effect_spritesheet_data_index + 2] > 0) {
-                    for (let i = 3; i >= 0; i--)
-                        effect_frame.data[effect_frame_index + i] = newframe.data[frame_index + i];
-                }
-                else if (is_different) {
-                    for (let i = 3; i >= 0; i--)
-                        effect_frame.data[effect_frame_index + i] = oldframe.data[frame_index + i];
-                }
-                frame_index += 4;
-                effect_frame_index += 4;
-            }
-        }
+
         return effect_frame;
     }
 
@@ -1767,6 +1786,13 @@ class iLGE_2D_Engine {
         for (let object of this.#objects) {
             if (object.type === iLGE_2D_Object_Type_Custom && object.element.length) {
                 this.canvas_context.save();
+                let object_scale = 1;
+                if (object.scale > 0) {
+                    object_scale = Math.min(
+                        this.canvas.width / object.scale,
+                        this.canvas.height / object.scale
+                    );
+                }
                 for (let element of object.element) {
                     if (!element.visible)
                         continue;
@@ -1776,8 +1802,15 @@ class iLGE_2D_Engine {
                                 this.getFrameData(), element.oldframe,
                                 object.x, object.y,
                                 object.width, object.height,
-                                element.image, element.size, element.src_index);
-                            this.canvas_context.putImageData(finalframe, object.x, object.y);
+                                element.image, element.size, object_scale, element.src_index);
+                            this.#drawImage(
+                                this.canvas_context,
+                                finalframe,
+                                0, 0,
+                                finalframe.width, finalframe.height,
+                                object.x, object.y,
+                                finalframe.width, finalframe.height
+                            );
                             break;
                     }
                 }
@@ -2256,8 +2289,19 @@ class iLGE_2D_Engine {
         }
     }
 
+    /**
+     * 
+     * @returns {OffscreenCanvas}
+     */
     getFrameData() {
-        return this.canvas_context.getImageData(0, 0, this.width, this.height);
+        let newframe = new OffscreenCanvas(this.width, this.height);
+        let context = newframe.getContext("2d");
+        this.#drawImage(
+            context, this.canvas,
+            0, 0, this.width, this.height,
+            0, 0, newframe.width, newframe.height
+        );
+        return newframe;
     }
 
     /**
