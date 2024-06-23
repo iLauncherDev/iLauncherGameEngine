@@ -969,9 +969,21 @@ class iLGE_2D_Engine {
         this.#control_map_default[action] = control;
     }
 
+    #control_map_handle_control(control, repeat) {
+        if (!control)
+            return;
+        if (control.startsWith("Mouse_Button") ||
+            control.startsWith("Keyboard_")) {
+            this.#controls[control] = this.#controls[control + "_Cache"];
+        }
+    }
+
     #control_map_get_helper(control, repeat) {
+        if (!control)
+            return 0;
         let control_value = this.#controls[control],
             old_control_value = control_value;
+        this.#control_map_handle_control(control, repeat);
         if (!control_value)
             return 0;
         if (!repeat) {
@@ -1005,6 +1017,7 @@ class iLGE_2D_Engine {
                         continue;
                     return control_value;
                 }
+                break;
         }
         return 0;
     }
@@ -1439,14 +1452,15 @@ class iLGE_2D_Engine {
                         continue;
                     z_order_find = true;
                     if (this.#collision_detection(vcamera, object)) {
-                        let object_half_size = object.getHalfSize();
+                        let object_width = object.width * camera.scale_output;
+                        let object_height = object.height * camera.scale_output;
+                        let object_half_size = [object_width / 2, object_height / 2];
                         camera.canvas_context.save();
                         camera.canvas_context.translate(
-                            object.x + object_half_size[0],
-                            object.y + object_half_size[1]
+                            object.x * camera.scale_output + object_half_size[0],
+                            object.y * camera.scale_output + object_half_size[1]
                         );
                         camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
-                        camera.canvas_context.scale(object.scale, object.scale);
                         for (let element of object.element) {
                             if (!element.visible)
                                 continue;
@@ -1454,10 +1468,10 @@ class iLGE_2D_Engine {
                                 case iLGE_2D_Object_Element_Type_Rectangle:
                                     this.#fillRect(
                                         camera.canvas_context, element.color,
-                                        -object_half_size[0],
-                                        -object_half_size[1],
-                                        object.width,
-                                        object.height
+                                        -object_half_size[0] * object.scale,
+                                        -object_half_size[1] * object.scale,
+                                        object_width * object.scale,
+                                        object_height * object.scale
                                     );
                                     break;
                                 case iLGE_2D_Object_Element_Type_Sprite:
@@ -1465,34 +1479,34 @@ class iLGE_2D_Engine {
                                         camera.canvas_context, element.image,
                                         element.src_x, element.src_y,
                                         element.src_width, element.src_height,
-                                        -object_half_size[0],
-                                        -object_half_size[1],
-                                        object.width,
-                                        object.height
+                                        -object_half_size[0] * object.scale,
+                                        -object_half_size[1] * object.scale,
+                                        object_width * object.scale,
+                                        object_height * object.scale
                                     );
                                     break;
                                 case iLGE_2D_Object_Element_Type_Text:
                                     if (element.styled_text)
                                         this.#drawTextWithStyles(
                                             element.string, camera.canvas_context,
-                                            object.width,
-                                            object.height,
+                                            object_width * object.scale,
+                                            object_height * object.scale,
                                             element.font_id,
-                                            -object_half_size[0],
-                                            -object_half_size[1],
-                                            element.px, element.color,
+                                            -object_half_size[0] * object.scale,
+                                            -object_half_size[1] * object.scale,
+                                            element.px * camera.scale_output * object.scale, element.color,
                                             element.alignment_center.vertical,
                                             element.alignment_center.horizontal
                                         );
                                     else
                                         this.#drawText(
                                             element.string, camera.canvas_context,
-                                            object.width,
-                                            object.height,
+                                            object_width * object.scale,
+                                            object_height * object.scale,
                                             element.font_id,
-                                            -object_half_size[0],
-                                            -object_half_size[1],
-                                            element.px, element.color,
+                                            -object_half_size[0] * object.scale,
+                                            -object_half_size[1] * object.scale,
+                                            element.px * camera.scale_output * object.scale, element.color,
                                             element.alignment_center.vertical,
                                             element.alignment_center.horizontal
                                         );
@@ -1542,9 +1556,10 @@ class iLGE_2D_Engine {
             vcamera.y += (camera.height / 2) / 2;
         }
         vcamera.prepareForCollision();
-        let halfSize = camera.getHalfSize();
+        let camera_width = camera.width * camera.scale_output;
+        let camera_height = camera.height * camera.scale_output;
+        let halfSize = [camera_width / 2, camera_height / 2];
         camera.canvas_context.save();
-        camera.canvas_context.scale(scale, scale);
         for (let element of camera.element) {
             if (!element.visible)
                 continue;
@@ -1553,7 +1568,7 @@ class iLGE_2D_Engine {
                     this.#fillRect(
                         camera.canvas_context, element.color,
                         0, 0,
-                        camera.width, camera.height
+                        camera_width, camera_height
                     );
                     break;
                 case iLGE_2D_Object_Element_Type_Sprite:
@@ -1562,7 +1577,7 @@ class iLGE_2D_Engine {
                         element.src_x, element.src_y,
                         element.src_width, element.src_height,
                         0, 0,
-                        camera.width, camera.height
+                        camera_width, camera_height
                     );
                     break;
             }
@@ -1573,8 +1588,8 @@ class iLGE_2D_Engine {
         );
         camera.canvas_context.rotate(-camera.rotation * (Math.PI / 180));
         camera.canvas_context.translate(
-            -camera.x - halfSize[0],
-            -camera.y - halfSize[1]
+            -camera.x * camera.scale_output - halfSize[0],
+            -camera.y * camera.scale_output - halfSize[1]
         );
         let z_order_info = this.#getZOrderInfo(camera.scene.objects);
         for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
@@ -1584,8 +1599,8 @@ class iLGE_2D_Engine {
         if (this.debug) {
             camera.canvas_context.strokeStyle = "#000000";
             camera.canvas_context.strokeRect(
-                vcamera.x - camera.x, vcamera.y - camera.y,
-                vcamera.width, vcamera.height
+                (vcamera.x - camera.x) * camera.scale_output, (vcamera.y - camera.y) * camera.scale_output,
+                vcamera.width * camera.scale_output, vcamera.height * camera.scale_output
             );
         }
         this.#drawImage(
@@ -1616,9 +1631,11 @@ class iLGE_2D_Engine {
         if (!newframe || !effect_spritesheet || !effect_size)
             return null;
 
+        let _effect_size = Math.max(effect_size, effect_size * effect_scale);
+
         if (!effect_spritesheet.effectCache) {
             effect_spritesheet.effectCache = {
-                canvas: new OffscreenCanvas(1, 1),
+                canvas: new OffscreenCanvas(_effect_size, _effect_size),
                 context: null,
                 maxIndex: effect_spritesheet.width / effect_size
             };
@@ -1632,8 +1649,11 @@ class iLGE_2D_Engine {
         effect_size = Math.floor(effect_size);
         effect_sprite_index = Math.min(Math.max(0, Math.floor(effect_sprite_index)), cache.maxIndex - 1);
 
-        let _effect_size = Math.max(effect_size, effect_size * effect_scale);
-        cache.canvas.width = cache.canvas.height = _effect_size;
+        if (cache.canvas.width !== _effect_size || cache.canvas.height !== _effect_size)
+            cache.canvas.width = cache.canvas.height = _effect_size;
+
+        cache.context.clearRect(0, 0, cache.canvas.width, cache.canvas.height);
+
         this.#drawImage(
             cache.context,
             effect_spritesheet,
@@ -1643,8 +1663,18 @@ class iLGE_2D_Engine {
             cache.canvas.width, cache.canvas.height
         );
 
-        const effect_frame = new OffscreenCanvas(dwidth, dheight);
-        const effect_frame_context = effect_frame.getContext("2d");
+        if (!this.effect_frame) {
+            this.effect_frame = new OffscreenCanvas(dwidth, dheight);
+            this.effect_frame_context = this.effect_frame.getContext("2d");
+        }
+
+        const effect_frame = this.effect_frame;
+        const effect_frame_context = this.effect_frame_context;
+
+        if (effect_frame.width !== dwidth || effect_frame.height !== dheight) {
+            effect_frame.width = dwidth;
+            effect_frame.height = dheight;
+        }
 
         if (oldframe)
             effect_frame_context.drawImage(
@@ -2162,9 +2192,10 @@ class iLGE_2D_Engine {
                     isThis.#controls[mouse_button_toggled_string][event.button] = true;
                 }
                 isThis.#controls["Mouse_Button_" + event.button] = true;
+                isThis.#controls["Mouse_Button_" + event.button + "_Cache"] = true;
                 break;
             case "ButtonUp":
-                isThis.#controls["Mouse_Button_" + event.button] = false;
+                isThis.#controls["Mouse_Button_" + event.button + "_Cache"] = false;
                 isThis.#controls[mouse_button_toggled_string][event.button] = false;
                 break;
         }
@@ -2221,10 +2252,16 @@ class iLGE_2D_Engine {
             isThis.#controls[keyborad_which_tag + "_Toggled"][keyboard_which_key] = false;
             isThis.#controls[keyborad_key_tag + "_Toggled"][keyboard_key_key] = false;
         }
-        isThis.#controls[keyboard_code_key] = bool;
-        isThis.#controls[keyboard_keycode_key] = bool;
-        isThis.#controls[keyboard_which_key] = bool;
-        isThis.#controls[keyboard_key_key] = bool;
+        if (bool) {
+            isThis.#controls[keyboard_code_key] = bool;
+            isThis.#controls[keyboard_keycode_key] = bool;
+            isThis.#controls[keyboard_which_key] = bool;
+            isThis.#controls[keyboard_key_key] = bool;
+        }
+        isThis.#controls[keyboard_code_key + "_Cache"] = bool;
+        isThis.#controls[keyboard_keycode_key + "_Cache"] = bool;
+        isThis.#controls[keyboard_which_key + "_Cache"] = bool;
+        isThis.#controls[keyboard_key_key + "_Cache"] = bool;
     }
 
     /**

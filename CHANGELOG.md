@@ -1,3 +1,7 @@
+# 0.3.16
+    now scaling is done without using the canvas_context.scale function
+    delta mouse button and keyboard keys
+
 # 0.3.15
     added scale support for transition effect
 
