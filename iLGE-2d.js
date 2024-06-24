@@ -1932,12 +1932,14 @@ class iLGE_2D_Engine {
                 object.old_x = object.x;
                 object.old_y = object.y;
                 object.old_rotation = object.rotation;
-                if (object.start_function && object.reset) {
-                    object.start_function(this);
-                    object.reset = false;
+                if (object.enabled) {
+                    if (object.start_function && object.reset) {
+                        object.start_function(this);
+                        object.reset = false;
+                    }
+                    if (object.update_function)
+                        object.update_function(this);
                 }
-                if (object.update_function && object.enabled)
-                    object.update_function(this);
                 switch (object.type) {
                     case iLGE_2D_Object_Type_Custom:
                         for (let element of object.element) {
@@ -1962,6 +1964,10 @@ class iLGE_2D_Engine {
     }
 
     start() {
+        this.#time_new = this.#getTime();
+        this.#time_diff = this.#time_new - this.#time_old;
+        this.#time_old = this.#time_new;
+
         if (!this.pointerLock) {
             document.exitPointerLock();
             this.canvas.style = "cursor: auto;";
@@ -1969,20 +1975,22 @@ class iLGE_2D_Engine {
         else {
             this.canvas.style = "cursor: none;";
         }
+
         if (this.#loaded_sources < this.#total_sources) {
             this.#requestAnimationFrame(this.start);
             return;
         }
+
         if (this.start_function && this.reset) {
             this.start_function(this);
             this.reset = false;
             this.#requestAnimationFrame(this.start);
             return;
         }
-        this.#time_old = this.#getTime();
         if (this.update_function) {
             this.update_function(this);
         }
+
         this.#gamepad_handler(null, this, null);
         let objects_with_collider_element = [];
         let blocker_objects_with_collider_element = [];
@@ -2014,16 +2022,12 @@ class iLGE_2D_Engine {
             blocker_objects_with_collider_element
         );
         this.#draw();
-        this.#time_new = this.#getTime();
-        this.#time_diff = this.#time_new - this.#time_old;
         if (this.fps_limit > 0) {
             let timeout = (1000 / this.fps_limit) - this.#time_diff;
-            if (timeout < 0)
-                timeout = 0;
+            if (timeout < 1)
+                timeout = 1;
             let isThis = this;
             setTimeout(function () {
-                isThis.#time_new = isThis.#getTime();
-                isThis.#time_diff = isThis.#time_new - isThis.#time_old;
                 isThis.deltaTime = isThis.#time_diff / (1000 / 60);
                 isThis.fps = Math.round(1000 / (isThis.#time_diff ? isThis.#time_diff : 1));
                 isThis.#requestAnimationFrame(isThis.start);

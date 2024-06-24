@@ -1,3 +1,6 @@
+# 0.3.17
+    fixed deltaTime accuracy
+
 # 0.3.16
     now scaling is done without using the canvas_context.scale function
     delta mouse button and keyboard keys
