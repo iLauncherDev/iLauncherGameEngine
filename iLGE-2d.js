@@ -329,10 +329,152 @@ class iLGE_2D_Object_Element_Collider {
     noclip = false;
     id = "OBJID";
     collided_objects = [];
+    incorporeal_objects = [];
     x = 0;
     y = 0;
     width = 0;
     height = 0;
+
+    /**
+     * 
+     * @param {Array} array 
+     * @returns {Array}
+     */
+    #clone_array(array) {
+        let copy = [];
+        for (let i = 0; i < array.length; i++)
+            copy[i] = Object.assign({}, array[i]);
+        return copy;
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     * @param {String} id 
+     */
+    #smartFind(array, id) {
+        for (let i = array.length - 1; i >= 0; i--) {
+            let array_object = array[i];
+            if (array_object.id === id) {
+                return array_object;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {Array} array1 
+     * @param {Array} array2 
+     */
+    #smartClean(array1, array2) {
+        for (let i = array1.length - 1; i >= 0; i--) {
+            if (!this.#smartFind(array2, array1[i].id)) {
+                array1.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     * @param {*} object 
+     */
+    #smartPush(array, object) {
+        for (let i = array.length - 1; i >= 0; i--) {
+            let array_object = array[i];
+            if (object === array_object) {
+                return;
+            }
+        }
+        array.push(object);
+    }
+
+    /**
+     * 
+     * @param {Array} array 
+     * @param {*} object 
+     */
+    #smartPop(array, object) {
+        for (let i = array.length - 1; i >= 0; i--) {
+            let array_object = array[i];
+            if (object === array_object) {
+                array.splice(i, 1);
+                return;
+            }
+        }
+    }
+
+    /**
+    * 
+    * @param {String} class_id
+    * @returns {Number}
+    */
+    countIncorporealObjectByClass(class_id) {
+        let number = 0;
+        for (let array_object of this.incorporeal_objects) {
+            if (array_object.class_id === class_id) {
+                number++;
+            }
+        }
+        return number;
+    }
+
+    /**
+     * 
+     * @param {String} id
+     * @returns {iLGE_2D_Object}
+     */
+    findIncorporealObject(id) {
+        for (let array_object of this.incorporeal_objects) {
+            if (array_object.id === id) {
+                return array_object;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {String} class_id
+     * @param {Number} index
+     * @returns {iLGE_2D_Object}
+     */
+    findIncorporealObjectByClass(class_id, index = 0) {
+        for (let array_object of this.incorporeal_objects) {
+            if (array_object.class_id === class_id) {
+                if (index < 1)
+                    return array_object;
+                index--;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} object 
+     */
+    addIncorporealObject(object) {
+        if (typeof object !== "object")
+            return;
+        if (!this.#smartFind(this.incorporeal_objects, object.id))
+            this.#smartPush(this.incorporeal_objects, object);
+    }
+
+    removeIncorporealObject(id) {
+        this.#smartPop(this.incorporeal_objects, this.#smartFind(this.incorporeal_objects, id));
+
+        for (let object of this.incorporeal_objects) {
+            if (object.type === iLGE_2D_Object_Type_Custom) {
+                for (let element of object.element) {
+                    if (element.type === iLGE_2D_Object_Element_Type_Collider) {
+                        this.#smartClean(element.collided_objects, this.incorporeal_objects);
+                    }
+                }
+            }
+        }
+    }
 
     collidedWithByClass(class_id = "CLASS", index = 0) {
         for (let collided_object of this.collided_objects) {
@@ -1132,24 +1274,23 @@ class iLGE_2D_Engine {
     }
 
     #fillRect(canvas_context, color, x, y, width, height) {
-        let isSizeChanged = false;
-        if (!this.onepixel_canvas) {
-            this.onepixel_canvas = new OffscreenCanvas(1, 1);
-            this.onepixel_canvas_context = this.onepixel_canvas.getContext("2d");
-            this.onepixel_canvas_context.imageSmoothingEnabled = false;
+        if (!canvas_context.onepixel_canvas) {
+            canvas_context.onepixel_canvas = new OffscreenCanvas(1, 1);
+            canvas_context.onepixel_canvas_context = canvas_context.onepixel_canvas.getContext("2d");
+            canvas_context.onepixel_canvas_context.imageSmoothingEnabled = false;
         }
-        if (this.onepixel_canvas.width !== 1 || this.onepixel_canvas.height !== 1) {
-            this.onepixel_canvas.width = this.onepixel_canvas.height = 1;
-            this.onepixel_canvas_context.imageSmoothingEnabled = false;
-            isSizeChanged = true;
+
+        if (canvas_context.onepixel_canvas.width !== 1 || canvas_context.onepixel_canvas.height !== 1) {
+            canvas_context.onepixel_canvas.width = canvas_context.onepixel_canvas.height = 1;
+            canvas_context.onepixel_canvas_context.imageSmoothingEnabled = false;
         }
-        if (this.onepixel_canvas_context.fillStyle !== color || isSizeChanged) {
-            this.onepixel_canvas_context.fillStyle = color;
-            this.onepixel_canvas_context.fillRect(0, 0, 1, 1);
-        }
+
+        canvas_context.onepixel_canvas_context.fillStyle = color;
+        canvas_context.onepixel_canvas_context.fillRect(0, 0, 1, 1);
+
         canvas_context.imageSmoothingEnabled = false;
         canvas_context.drawImage(
-            this.onepixel_canvas,
+            canvas_context.onepixel_canvas,
             0, 0, 1, 1,
             x, y, width, height
         );
@@ -1639,9 +1780,7 @@ class iLGE_2D_Engine {
                 context: null,
                 maxIndex: effect_spritesheet.width / effect_size
             };
-            effect_spritesheet.effectCache.context = effect_spritesheet.effectCache.canvas.getContext(
-                "2d", { willReadFrequently: true }
-            );
+            effect_spritesheet.effectCache.context = effect_spritesheet.effectCache.canvas.getContext("2d");
         }
 
         const cache = effect_spritesheet.effectCache;
@@ -1852,6 +1991,42 @@ class iLGE_2D_Engine {
     /**
      * 
      * @param {iLGE_2D_Object} tmp_object1 
+     * @param {iLGE_2D_Object} tmp_object2 
+     * @param {Number} startX 
+     * @param {Number} startY 
+     * @param {Number} endX 
+     * @param {Number} endY 
+     * @returns 
+     */
+    #checkContinuousCollision(tmp_object1, tmp_object2, startX, startY, endX, endY) {
+        const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+        let collisionPoint = null;
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+
+            tmp_object1.x = startX + t * (endX - startX);
+            tmp_object1.y = startY + t * (endY - startY);
+            tmp_object1.prepareForCollision();
+
+            if (this.#collision_detection(tmp_object1, tmp_object2)) {
+                const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
+
+                if (overlap.x || overlap.y) {
+                    collisionPoint = {
+                        x: tmp_object1.x,
+                        y: tmp_object1.y
+                    };
+                    break;
+                }
+            }
+        }
+        return collisionPoint;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} tmp_object1 
      * @param {iLGE_2D_Object_Element_Collider} element1 
      * @param {iLGE_2D_Object} object1 
      * @param {iLGE_2D_Object} object2 
@@ -1866,15 +2041,49 @@ class iLGE_2D_Engine {
                     element2.width, element2.height,
                 );
                 tmp_object2.prepareForCollision();
-                if (this.#collision_detection(tmp_object1, tmp_object2)) {
+                if (!this.#smartFind(element2.incorporeal_objects, object1.id) &&
+                    this.#collision_detection(tmp_object1, tmp_object2)) {
                     if (!element1.blocker && !element1.noclip && element2.blocker) {
-                        const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
+                        const velocityX1 = object1.x - object1.old_x;
+                        const velocityY1 = object1.y - object1.old_y;
 
-                        if (Math.abs(overlap.x) < Math.abs(overlap.y))
-                            object1.x -= overlap.x;
-                        else
-                            object1.y -= overlap.y;
+                        const velocityX2 = object2.x - object2.old_x;
+                        const velocityY2 = object2.y - object2.old_y;
+
+                        const relativeVelocityX = velocityX1 - velocityX2;
+                        const relativeVelocityY = velocityY1 - velocityY2;
+
+                        const collisionPoint = this.#checkContinuousCollision(
+                            tmp_object1, tmp_object2,
+                            object1.old_x, object1.old_y,
+                            object1.x + relativeVelocityX, object1.y + relativeVelocityY
+                        );
+
+                        if (collisionPoint) {
+                            const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
+
+                            if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
+                                object1.x = collisionPoint.x - overlap.x;
+                            } else {
+                                object1.y = collisionPoint.y - overlap.y;
+                            }
+                        }
+
+                        tmp_object1.x = object1.x;
+                        tmp_object1.y = object1.y;
+                        tmp_object1.prepareForCollision();
+
+                        if (this.#collision_detection(tmp_object1, tmp_object2)) {
+                            const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
+
+                            if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
+                                object1.x -= overlap.x;
+                            } else {
+                                object1.y -= overlap.y;
+                            }
+                        }
                     }
+
                     this.#smartPush(element1.collided_objects, object2);
                     this.#smartPush(element2.collided_objects, object1);
                 }
@@ -2499,10 +2708,7 @@ class iLGE_2D_Engine {
         this.gameid = gameid;
         this.start = this.start.bind(isThis);
         this.canvas = document.createElement("canvas");
-        this.canvas_context = this.canvas.getContext(
-            "2d",
-            { willReadFrequently: true }
-        );
+        this.canvas_context = this.canvas.getContext("2d");
         this.canvas.width = width;
         this.canvas.height = height;
         if (auto_resize)

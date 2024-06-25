@@ -1,3 +1,9 @@
+# 0.3.18
+    added incorporeal objects support in iLGE_2D_Object_Element_Collider class
+    fixed blocker collision resolution in iLGE_2D_Engine class
+    redraw onepixel_canvas_context in iLGE_2D_Engine class
+    removed {willReadFrequently: true} in all canvas contexts
+
 # 0.3.17
     fixed deltaTime accuracy
 
