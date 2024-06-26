@@ -1,3 +1,6 @@
+# 0.4.0
+    changed the Audio to AudioContext
+
 # 0.3.18
     added incorporeal objects support in iLGE_2D_Object_Element_Collider class
     fixed blocker collision resolution in iLGE_2D_Engine class

@@ -26,6 +26,8 @@ class iLGE_2D_Vector2 {
     }
 
     sum(vector) {
+        if (typeof vector === "number")
+            vector = new iLGE_2D_Vector2(vector, vector);
         if (!vector)
             return this;
         this.x += vector.x;
@@ -34,6 +36,8 @@ class iLGE_2D_Vector2 {
     }
 
     subtract(vector) {
+        if (typeof vector === "number")
+            vector = new iLGE_2D_Vector2(vector, vector);
         if (!vector)
             return this;
         this.x -= vector.x;
@@ -42,6 +46,8 @@ class iLGE_2D_Vector2 {
     }
 
     multiply(vector) {
+        if (typeof vector === "number")
+            vector = new iLGE_2D_Vector2(vector, vector);
         if (!vector)
             return this;
         this.x *= vector.x;
@@ -50,6 +56,8 @@ class iLGE_2D_Vector2 {
     }
 
     divide(vector) {
+        if (typeof vector === "number")
+            vector = new iLGE_2D_Vector2(vector, vector);
         if (!vector)
             return this;
         this.x = vector.x !== 0 ? (this.x / vector.x) : 0;
@@ -108,7 +116,7 @@ class iLGE_2D_Source {
         if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
             return;
         this.source.pause();
-        this.currentTime = 0;
+        this.source.currentTime = 0;
     }
 
     pauseAudio() {
@@ -117,37 +125,70 @@ class iLGE_2D_Source {
         this.source.pause();
     }
 
-    playAudio() {
+    createAudioBufferSource() {
         if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
-            return;
-        this.source.play();
+            return null;
+        const source = this.source.createBufferSource();
+        source.buffer = this.source.Abuffer;
+
+        source.analyser = this.source.createAnalyser();
+        source.analyser.fftSize = 256;
+        source.analyser.connect(this.source.destination);
+
+        source.volume = this.source.createGain();
+        source.volume.gain.value = 1;
+        source.volume.connect(source.analyser);
+
+        source.connect(source.volume);
+        return source;
     }
 
-    setAudioTime(time = 0) {
-        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
-            return;
-        this.source.currentTime = time;
+    playAudio(source) {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio) || !source)
+            return null;
+        source.start();
     }
 
-    setAudioVolume(volume = 1) {
-        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio))
+    setAudioTime(source, time = 0) {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio) || !source)
             return;
-        this.source.volume = volume;
+        source.currentTime = time;
+    }
+
+    setAudioVolume(source, volume = 1) {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio) || !source)
+            return;
+        source.volume.gain.value = volume;
+    }
+
+    getAudioVolumeAverage(source) {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio) || !source)
+            return;
+        const dataArray = new Uint8Array(source.analyser.frequencyBinCount);
+
+        let sum = 0;
+        for (const amplitude of dataArray) {
+            sum += Math.abs(amplitude - 128);
+        }
+
+        const average = sum / dataArray.length;
+        const normalizedVolume = average / 128;
+        return normalizedVolume;
     }
 
     cloneIt() {
         let source = new iLGE_2D_Source(null, this.#src, this.#type);
         switch (this.#type) {
             case iLGE_2D_Source_Type_Audio:
-                source.source = new Audio();
-                source.source.src = this.source.src;
+                console.error("[iLGE-2d] Cannot clone AudioContext!");
+                source = null;
                 break;
             case iLGE_2D_Source_Type_Image:
                 source.source = new Image();
                 source.source.src = this.source.src;
                 break;
         }
-        if (this.source_data) {
+        if (this.source_data && source) {
             let arraybuffer = new ArrayBuffer(this.source_data.length);
             for (let i = 0; i < arraybuffer.length; i++)
                 arraybuffer[i] = this.source_data[i];
@@ -1304,7 +1345,9 @@ class iLGE_2D_Engine {
         if (!font_object)
             return;
 
-        font_object.canvas.height = font_object.height;
+        if (font_object.canvas.height !== font_object.height)
+            font_object.canvas.height = font_object.height;
+
         const font_scale = font_object.height / px;
         const font_height = font_object.height / font_scale;
 
@@ -1320,25 +1363,18 @@ class iLGE_2D_Engine {
 
                 if (char === '<') {
                     let endIndex = line.indexOf('>', i);
-                    if (endIndex !== -1) {
-                        if (line.startsWith('<color=', i)) {
-                            let cache0 = line.indexOf('=', i) + 1,
-                                cache1 = line.indexOf('<', endIndex) - 1,
-                                cache2 = line.indexOf('>', endIndex + 1);
-                            const colorValue = line.substr(cache0, endIndex - cache0);
-                            const colorString = line.substr(
-                                endIndex + 1,
-                                cache1 - endIndex);
-                            parts.push(currentPart);
-                            currentPart = { string: '', color: color };
-                            currentPart.string = colorString;
-                            currentPart.color = colorValue;
-                            parts.push(currentPart);
-                            currentPart = { string: '', color: color };
-
-                            i = cache2;
-                            continue;
-                        }
+                    if (endIndex !== -1 && line.startsWith('<color=', i)) {
+                        let cache0 = line.indexOf('=', i) + 1,
+                            cache1 = line.indexOf('<', endIndex),
+                            cache2 = line.indexOf('>', endIndex + 1);
+                        const colorValue = line.substring(cache0, endIndex);
+                        const colorString = line.substring(endIndex + 1, cache1);
+                        parts.push(currentPart);
+                        currentPart = { string: colorString, color: colorValue };
+                        parts.push(currentPart);
+                        currentPart = { string: '', color: color };
+                        i = cache2;
+                        continue;
                     }
                 }
 
@@ -1354,7 +1390,6 @@ class iLGE_2D_Engine {
             let line_width = 0;
             let splitLines = [];
             let currentLine = '';
-            let currentColor = color;
 
             for (let i = 0; i < line.length; i++) {
                 const char = line.charAt(i);
@@ -1451,7 +1486,16 @@ class iLGE_2D_Engine {
                     if (font_y_pos >= max_height)
                         break;
 
-                    font_object.canvas.width = font_object.width_array[char];
+                    font_object.canvas_context.globalCompositeOperation = "source-over";
+
+                    if (font_object.canvas.width !== font_object.width_array[char]) {
+                        font_object.canvas.width = font_object.width_array[char];
+                    } else {
+                        font_object.canvas_context.clearRect(
+                            0, 0,
+                            font_object.canvas.width, font_object.canvas.height
+                        );
+                    }
 
                     this.#drawImage(
                         font_object.canvas_context, font_object.image,
@@ -1489,7 +1533,9 @@ class iLGE_2D_Engine {
         if (!font_object)
             return;
 
-        font_object.canvas.height = font_object.height;
+        if (font_object.canvas.height !== font_object.height)
+            font_object.canvas.height = font_object.height;
+
         const font_scale = font_object.height / px;
         const font_height = font_object.height / font_scale;
 
@@ -1555,7 +1601,16 @@ class iLGE_2D_Engine {
                 if (font_y_pos >= max_height)
                     break;
 
-                font_object.canvas.width = font_object.width_array[char];
+                font_object.canvas_context.globalCompositeOperation = "source-over";
+
+                if (font_object.canvas.width !== font_object.width_array[char]) {
+                    font_object.canvas.width = font_object.width_array[char];
+                } else {
+                    font_object.canvas_context.clearRect(
+                        0, 0,
+                        font_object.canvas.width, font_object.canvas.height
+                    );
+                }
 
                 this.#drawImage(
                     font_object.canvas_context, font_object.image,
@@ -2002,9 +2057,9 @@ class iLGE_2D_Engine {
         const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
         let collisionPoint = null;
 
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
+        const increments = 1 / steps;
 
+        for (let t = 0; t <= 1; t += increments) {
             tmp_object1.x = startX + t * (endX - startX);
             tmp_object1.y = startY + t * (endY - startY);
             tmp_object1.prepareForCollision();
@@ -2031,7 +2086,7 @@ class iLGE_2D_Engine {
      * @param {iLGE_2D_Object} object1 
      * @param {iLGE_2D_Object} object2 
      */
-    #check_object_collision(tmp_object1, element1, object1, object2) {
+    #check_object_collision(tmp_object1, element1, object1, object2, isBlocker) {
         for (let element2 of object2.element) {
             if (element2.type === iLGE_2D_Object_Element_Type_Collider) {
                 let tmp_object2 = new iLGE_2D_Object(
@@ -2041,9 +2096,10 @@ class iLGE_2D_Engine {
                     element2.width, element2.height,
                 );
                 tmp_object2.prepareForCollision();
+
                 if (!this.#smartFind(element2.incorporeal_objects, object1.id) &&
                     this.#collision_detection(tmp_object1, tmp_object2)) {
-                    if (!element1.blocker && !element1.noclip && element2.blocker) {
+                    if (isBlocker && !element1.blocker && !element1.noclip && element2.blocker) {
                         const velocityX1 = object1.x - object1.old_x;
                         const velocityY1 = object1.y - object1.old_y;
 
@@ -2082,6 +2138,10 @@ class iLGE_2D_Engine {
                                 object1.y -= overlap.y;
                             }
                         }
+
+                        tmp_object1.x = object1.x;
+                        tmp_object1.y = object1.y;
+                        tmp_object1.prepareForCollision();
                     }
 
                     this.#smartPush(element1.collided_objects, object2);
@@ -2114,13 +2174,13 @@ class iLGE_2D_Engine {
                         let object2 = objects_with_collider_element[j];
                         if (object1.id === object2.id)
                             continue;
-                        this.#check_object_collision(tmp_object1, element1, object1, object2);
+                        this.#check_object_collision(tmp_object1, element1, object1, object2, false);
                     }
                     for (let j = 0; j < blocker_objects_with_collider_element.length; j++) {
                         let object2 = blocker_objects_with_collider_element[j];
                         if (object1 === object2)
                             continue;
-                        this.#check_object_collision(tmp_object1, element1, object1, object2);
+                        this.#check_object_collision(tmp_object1, element1, object1, object2, true);
                     }
                 }
             }
@@ -2647,19 +2707,17 @@ class iLGE_2D_Engine {
                 case ".wav":
                 case ".mp3":
                 case ".ogg":
-                    source = new Audio();
+                    source = new (window.AudioContext || window.webkitAudioContext)();
                     source_object = new iLGE_2D_Source(source, source_url, iLGE_2D_Source_Type_Audio);
-                    xhr.onload = function () {
+                    xhr.onload = async function () {
                         if (xhr.status !== 200) {
                             isThis.#total_sources--;
                             result = false;
                             return;
                         }
                         let audioData = xhr.response;
+                        source.Abuffer = await source.decodeAudioData(audioData);
                         source_object.source_data = audioData;
-                        source.src = URL.createObjectURL(
-                            new Blob([audioData, { type: "audio/mpeg" }])
-                        );
                         isThis.#source.push(source_object);
                         isThis.#loaded_sources++;
                     };

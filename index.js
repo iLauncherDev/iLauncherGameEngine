@@ -415,11 +415,13 @@ game.start_function = function (engine) {
                  */
                 collided_wall.update_function = function (engine) {
                     if (this.delay < 1) {
+                        const source = clang_audio.createAudioBufferSource();
+                        clang_audio.playAudio(source);
                         this.scene.removeObject(this.id);
-                        clang_audio.cloneIt().playAudio();
                         eated_walls++;
                     }
                 };
+
                 if (collided_wall.delay < 1)
                     collided_wall.reset = true;
                 collided_wall = this.collider.collidedWithByClass("wall", collided_index++);
