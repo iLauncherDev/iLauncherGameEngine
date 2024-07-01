@@ -1751,6 +1751,8 @@ class iLGE_2D_Engine {
             vcamera.x += (camera.width / 2) / 2;
             vcamera.y += (camera.height / 2) / 2;
         }
+        vcamera.x += 1, vcamera.y += 1;
+        vcamera.width -= 2, vcamera.height -= 2;
         vcamera.prepareForCollision();
         let camera_width = camera.width * camera.scale_output;
         let camera_height = camera.height * camera.scale_output;
@@ -2054,7 +2056,7 @@ class iLGE_2D_Engine {
      * @returns 
      */
     #checkContinuousCollision(tmp_object1, tmp_object2, startX, startY, endX, endY) {
-        const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+        const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY), 1);
         let collisionPoint = null;
 
         const increments = 1 / steps;
@@ -2065,15 +2067,11 @@ class iLGE_2D_Engine {
             tmp_object1.prepareForCollision();
 
             if (this.#collision_detection(tmp_object1, tmp_object2)) {
-                const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-
-                if (overlap.x || overlap.y) {
-                    collisionPoint = {
-                        x: tmp_object1.x,
-                        y: tmp_object1.y
-                    };
-                    break;
-                }
+                collisionPoint = {
+                    x: tmp_object1.x,
+                    y: tmp_object1.y
+                };
+                break;
             }
         }
         return collisionPoint;
@@ -2122,20 +2120,6 @@ class iLGE_2D_Engine {
                                 object1.x = collisionPoint.x - overlap.x;
                             } else {
                                 object1.y = collisionPoint.y - overlap.y;
-                            }
-                        }
-
-                        tmp_object1.x = object1.x;
-                        tmp_object1.y = object1.y;
-                        tmp_object1.prepareForCollision();
-
-                        if (this.#collision_detection(tmp_object1, tmp_object2)) {
-                            const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-
-                            if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
-                                object1.x -= overlap.x;
-                            } else {
-                                object1.y -= overlap.y;
                             }
                         }
 

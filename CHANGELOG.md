@@ -1,3 +1,7 @@
+# 0.4.1
+    improved camera occlusion culling
+    small optimizations
+
 # 0.4.0
     changed the Audio to AudioContext
 
