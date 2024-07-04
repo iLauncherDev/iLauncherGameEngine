@@ -12,6 +12,269 @@ let game = new iLGE_2D_Engine(
     true
 );
 
+game.debug = true;
+
+class MapMatrix {
+    x = 0;
+    y = 0;
+    array = [];
+    safe_zones = [0];
+    visible_zones = [0];
+
+    /**
+     * 
+     * @param {Number} safe_zone 
+     */
+    addSafeZone(safe_zone = 0) {
+        for (const zone of this.safe_zones) {
+            if (zone === safe_zone)
+                return;
+        }
+        this.safe_zones.push(safe_zone);
+    }
+
+    /**
+     * 
+     * @param {Number} visible_zone 
+     */
+    addVisibleZone(visible_zone = 0) {
+        for (const zone of this.visible_zones) {
+            if (zone === visible_zone)
+                return;
+        }
+        this.visible_zones.push(visible_zone);
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Vector2} vector 
+     * @returns {iLGE_2D_Vector2}
+     */
+    getArrayVector(vector) {
+        let convertedVector = new iLGE_2D_Vector2(
+            Math.floor(vector.x / this.size),
+            Math.floor(vector.y / this.size)
+        );
+        if (convertedVector.x < this.x ||
+            convertedVector.y < this.y ||
+            convertedVector.y >= this.array.length ||
+            convertedVector.x >= this.array[convertedVector.y].length) {
+            return null;
+        }
+        convertedVector.x -= this.x;
+        convertedVector.y -= this.y;
+        return convertedVector;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Vector2} vector 
+     * @returns {iLGE_2D_Vector2}
+     */
+    getArrayCellCenter(vector) {
+        if (!vector ||
+            vector.y >= this.array.length ||
+            vector.x >= this.array[vector.y].length)
+            return null;
+        return new iLGE_2D_Vector2(
+            (vector.x + this.x + 0.5) * this.size,
+            (vector.y + this.y + 0.5) * this.size
+        );
+    }
+
+    /**
+     * 
+     * @param {Number} zone 
+     * @returns {Number}
+     */
+    countZones(zone = 0) {
+        let zones = 0;
+        for (let y = 0; y < this.array.length; y++) {
+            let horizontal = this.array[y];
+            for (let x = 0; x < horizontal.length; x++) {
+                if (horizontal[x] === zone)
+                    zones++;
+            }
+        }
+        return zones;
+    }
+
+    /**
+     * 
+     * @param {Number} zone 
+     * @param {Number} index 
+     */
+    getZonePosition(zone = 0, index = 0) {
+        for (let y = 0; y < this.array.length; y++) {
+            let horizontal = this.array[y];
+            for (let x = 0; x < horizontal.length; x++) {
+                if (horizontal[x] === zone) {
+                    if (index < 1)
+                        return this.getArrayCellCenter(new iLGE_2D_Vector2(x, y));
+                    index--;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} object1 
+     * @param {iLGE_2D_Object} object2 
+     * @returns {Boolean}
+     */
+    canSee(object1, object2) {
+        let tmpVector1 = new iLGE_2D_Vector2(
+            object1.x + object1.width / 2,
+            object1.y + object1.height / 2
+        );
+        let tmpVector2 = new iLGE_2D_Vector2(
+            object2.x + object2.width / 2,
+            object2.y + object2.height / 2
+        );
+        let convertedVector1 = new iLGE_2D_Vector2(
+            Math.floor(tmpVector1.x / this.size),
+            Math.floor(tmpVector1.y / this.size)
+        );
+        let convertedVector2 = new iLGE_2D_Vector2(
+            Math.floor(tmpVector2.x / this.size),
+            Math.floor(tmpVector2.y / this.size)
+        );
+        if (convertedVector1.x < this.x ||
+            convertedVector1.y < this.y ||
+            convertedVector1.y >= this.array.length ||
+            convertedVector1.x >= this.array[convertedVector1.y].length) {
+            return false;
+        }
+        if (convertedVector2.x < this.x ||
+            convertedVector2.y < this.y ||
+            convertedVector2.y >= this.array.length ||
+            convertedVector2.x >= this.array[convertedVector2.y].length) {
+            return false;
+        }
+        convertedVector1.x -= this.x;
+        convertedVector1.y -= this.y;
+        convertedVector2.x -= this.x;
+        convertedVector2.y -= this.y;
+        const dx = Math.abs(convertedVector2.x - convertedVector1.x);
+        const dy = Math.abs(convertedVector2.y - convertedVector1.y);
+        const sx = (convertedVector1.x < convertedVector2.x) ? 1 : -1;
+        const sy = (convertedVector1.y < convertedVector2.y) ? 1 : -1;
+        let err = dx - dy;
+        while (
+            convertedVector1.x !== convertedVector2.x ||
+            convertedVector1.y !== convertedVector2.y
+        ) {
+            if (!this.visible_zones.includes(this.array[convertedVector1.y][convertedVector1.x])) {
+                return false;
+            }
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                convertedVector1.x += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                convertedVector1.y += sy;
+            }
+        }
+        return this.visible_zones.includes(this.array[convertedVector1.y][convertedVector1.x]) ?
+            true : false;
+    }
+
+    constructor(array, x, y, size) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.array = array;
+    }
+}
+
+let classic_map = new MapMatrix([
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [1, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+    [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2, 0, 0, 0, 0, 1, 0, 1, 0],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1, 2, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 2, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 2, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 2, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 1, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 9, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+], 0, 0, 256);
+
+classic_map.addSafeZone(2);
+classic_map.addSafeZone(8);
+classic_map.addSafeZone(9);
+classic_map.addVisibleZone(2);
+classic_map.addVisibleZone(8);
+classic_map.addVisibleZone(9);
+
+function loadMap(scene, map) {
+    let offset = new iLGE_2D_Vector2(
+        map.x * map.size,
+        map.y * map.size
+    );
+    for (let y = 0; y < map.array.length; y++) {
+        let array = map.array[y];
+        for (let x = 0; x < array.length; x++) {
+            let value = array[x];
+            switch (value) {
+                case 1:
+                    /* setup the wall */
+                    let wall = new iLGE_2D_Object(
+                        "Wall_" + (y * array.length + x), "wall",
+                        iLGE_2D_Object_Type_Custom,
+                        x * map.size + offset.x, y * map.size + offset.y, 0, 1, map.size, map.size
+                    );
+                    /* add rectangle to wall */
+                    wall.addElement(new iLGE_2D_Object_Element_Rectangle("#ffff00", "rect", true));
+                    /* add collider to wall */
+                    wall.addElement(new iLGE_2D_Object_Element_Collider(
+                        true, false, "blocker",
+                        0, 0, wall.width, wall.height
+                    ));
+                    scene.addObject(wall);
+                    break;
+            }
+        }
+    }
+}
+
 game.start_function = function (engine) {
     let scene = new iLGE_2D_Scene("MyScene", "scene", true);
     this.addObject(scene);
@@ -166,7 +429,11 @@ game.start_function = function (engine) {
 
     scene.addObject(player);
     this.addObject(transition_effect);
-    createRoom(128, 128, 0, 0);
+    loadMap(scene, classic_map);
+
+    let position = classic_map.getZonePosition(9);
+    player.x = position.x - player.width / 2;
+    player.y = position.y - player.height / 2;
 
     let total_walls = scene.countObjectByClass("wall"), eated_walls = 0;
 
@@ -248,7 +515,8 @@ game.start_function = function (engine) {
         engine.addObject(this.stamina_hud_green);
         this.collider = new iLGE_2D_Object_Element_Collider(
             false, false, this.id + "_collder",
-            0, 0, this.width, this.height);
+            0, 0, this.width, this.height
+        );
         console.log("Hello, it's me, " + this.id + "!");
         engine.pointerLock = true;
         this.max_stamina = 1024;
@@ -306,7 +574,6 @@ game.start_function = function (engine) {
         }
         this.cursor_update(engine, movementX, movementY, true);
         this.game_title.element[0].string =
-            engine.fps + " <color=red>FPS</color>\n" +
             engine.title + "\n" +
             eated_walls + "/" + total_walls + " Eated Walls";
         let stamina = this.stamina / this.max_stamina;

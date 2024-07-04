@@ -1,3 +1,9 @@
+# 0.4.2
+    improved camera rendering in iLGE_2D_Engine class
+    added pixel filtering in iLGE_2D_Engine class
+    added cache/canvas variables in some places
+    added opacity support
+
 # 0.4.1
     improved camera occlusion culling
     small optimizations

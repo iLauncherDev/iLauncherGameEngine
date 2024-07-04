@@ -226,6 +226,9 @@ class iLGE_2D_Object_Font {
         if (!string || !this.width_array.length)
             return size;
 
+        max_width = Math.round(max_width);
+        max_height = Math.round(max_height);
+
         const font_scale = this.height / px;
         const font_height = this.height / font_scale;
         let current_line_width = 0;
@@ -245,7 +248,7 @@ class iLGE_2D_Object_Font {
                 continue;
             }
 
-            if (current_line_width + char_width > max_width) {
+            if (Math.round(current_line_width + char_width) > max_width) {
                 size.width = Math.max(size.width, current_line_width);
                 current_line_width = char_width;
                 total_height += font_height;
@@ -305,6 +308,8 @@ class iLGE_2D_Object_Element_Sprite {
     src_y = 0;
     src_width = 0;
     src_height = 0;
+    opacity = 1;
+
     constructor(source_object, id, visible, src_x, src_y, src_width, src_height) {
         let image_object = null;
         if (!source_object || !source_object.compareSourceType(iLGE_2D_Source_Type_Image))
@@ -325,6 +330,8 @@ class iLGE_2D_Object_Element_Rectangle {
     color = "#000000";
     id = "OBJID";
     visible = true;
+    opacity = 1;
+
     constructor(color, id, visible) {
         this.id = id;
         this.color = color;
@@ -342,6 +349,8 @@ class iLGE_2D_Object_Element_Text {
     visible = true;
     styled_text = false;
     alignment_center = { vertical: false, horizontal: false };
+    opacity = 1;
+
     constructor(font_id, id, string, px, color, visible) {
         this.font_id = font_id;
         this.id = id;
@@ -356,8 +365,22 @@ class iLGE_2D_Object_Element_Camera_Viewer {
     type = iLGE_2D_Object_Element_Type_Camera_Viewer;
     id = "OBJID";
     camera = 0;
+    pixel_filtering = false;
+    pixel_filtering_level = 0;
     visible = true;
+    opacity = 1;
+
+    canvas = new OffscreenCanvas(1, 1);
+
+    clearScreen() {
+        if (this.canvas && this.canvas_context) {
+            this.canvas_context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }
+
     constructor(camera, id, visible) {
+        this.canvas_context = this.canvas.getContext("2d");
+
         this.id = id;
         this.camera = camera;
         this.visible = visible;
@@ -896,6 +919,9 @@ class iLGE_2D_Engine {
     start_function = 0;
     update_function = 0;
 
+    #string_cache = [];
+    #string_cache_styles = [];
+
     #control_map_key = "Control_Map";
 
     /* Game Objects */
@@ -1306,7 +1332,29 @@ class iLGE_2D_Engine {
     #drawImage(canvas_context, image, sx, sy, swidth, sheight, dx, dy, width, height) {
         if (!image)
             return;
-        canvas_context.imageSmoothingEnabled = false;
+        const pixel_filtering = canvas_context.pixel_filtering ? true : false;
+        let pixel_filtering_level;
+        switch (canvas_context.pixel_filtering_level) {
+            case 0:
+                pixel_filtering_level = "low";
+                break;
+            case 1:
+                pixel_filtering_level = "medium";
+                break;
+            case 2:
+                pixel_filtering_level = "high";
+                break;
+            default:
+                pixel_filtering_level = "low";
+        }
+
+        canvas_context.imageSmoothingQuality =
+            canvas_context.mozImageSmoothingQuality =
+            canvas_context.webkitImageSmoothingQuality = pixel_filtering_level;
+        canvas_context.imageSmoothingEnabled =
+            canvas_context.mozImageSmoothingEnabled =
+            canvas_context.webkitImageSmoothingEnabled = pixel_filtering;
+
         canvas_context.drawImage(
             image,
             sx, sy, swidth, sheight,
@@ -1318,14 +1366,9 @@ class iLGE_2D_Engine {
         if (!canvas_context.onepixel_canvas) {
             canvas_context.onepixel_canvas = new OffscreenCanvas(1, 1);
             canvas_context.onepixel_canvas_context = canvas_context.onepixel_canvas.getContext("2d");
-            canvas_context.onepixel_canvas_context.imageSmoothingEnabled = false;
         }
 
-        if (canvas_context.onepixel_canvas.width !== 1 || canvas_context.onepixel_canvas.height !== 1) {
-            canvas_context.onepixel_canvas.width = canvas_context.onepixel_canvas.height = 1;
-            canvas_context.onepixel_canvas_context.imageSmoothingEnabled = false;
-        }
-
+        canvas_context.onepixel_canvas.width = canvas_context.onepixel_canvas.height = 1;
         canvas_context.onepixel_canvas_context.fillStyle = color;
         canvas_context.onepixel_canvas_context.fillRect(0, 0, 1, 1);
 
@@ -1345,11 +1388,50 @@ class iLGE_2D_Engine {
         if (!font_object)
             return;
 
+        max_width = Math.round(max_width);
+        max_height = Math.round(max_height);
+
         if (font_object.canvas.height !== font_object.height)
             font_object.canvas.height = font_object.height;
 
         const font_scale = font_object.height / px;
         const font_height = font_object.height / font_scale;
+
+        if (!canvas_context.string_cache1)
+            canvas_context.string_cache1 = [];
+
+        let string_cache = this.#smartFind(canvas_context.string_cache1, string);
+        let isResized = false;
+
+        if (!string_cache) {
+            string_cache = {
+                px: px,
+                id: string,
+                color: color,
+                canvas: new OffscreenCanvas(max_width, max_height),
+            };
+            string_cache.canvas_context = string_cache.canvas.getContext("2d");
+            this.#smartPush(canvas_context.string_cache1, string_cache);
+            isResized = true;
+        }
+
+        if (string_cache.canvas.width !== max_width ||
+            string_cache.canvas.height !== max_height) {
+            string_cache.canvas.width = max_width;
+            string_cache.canvas.height = max_height;
+            isResized = true;
+        }
+
+        if (string_cache.id !== string || string_cache.color !== color || string_cache.px !== px) {
+            string_cache.canvas_context.clearRect(0, 0, max_width, max_height);
+            string_cache.px = px;
+            string_cache.id = string;
+            string_cache.color = color;
+            isResized = true;
+        }
+
+        string_cache.canvas_context.pixel_filtering = canvas_context.pixel_filtering;
+        string_cache.canvas_context.pixel_filtering_level = canvas_context.pixel_filtering_level;
 
         if (y + px > max_height)
             return;
@@ -1429,7 +1511,7 @@ class iLGE_2D_Engine {
                 if (font_object.width_array[char])
                     char_width = font_object.width_array[char] / font_scale;
 
-                if (line_width + char_width > max_width || char === '\n') {
+                if (Math.round(line_width + char_width) > max_width || char === '\n') {
                     splitLines.push(currentLine);
                     currentLine = '';
                     line_width = 0;
@@ -1445,46 +1527,205 @@ class iLGE_2D_Engine {
             return splitLines;
         };
 
-        const lines = _splitLine(string);
+        if (isResized) {
+            const lines = _splitLine(string);
 
-        const total_text_height = lines.length * font_height;
-        let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
+            const total_text_height = lines.length * font_height;
+            let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
 
-        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-            const parts = splitLine(lines[lineIndex]);
-            let font_aux_x = 0;
+            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                const parts = splitLine(lines[lineIndex]);
+                let font_aux_x = 0;
 
-            if (h_center) {
-                let line_width = 0;
+                if (h_center) {
+                    let line_width = 0;
+                    for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+                        const part = parts[partIndex];
+                        for (let index = 0; index < part.string.length; index++) {
+                            let char = part.string.charAt(index);
+                            if (!font_object.width_array[char] || !font_object.map[char])
+                                continue;
+                            const font_width = font_object.width_array[char] / font_scale;
+                            line_width += font_width;
+                        }
+                    }
+                    font_aux_x = (max_width - line_width) / 2;
+                }
+
+                let font_x_pos = 0;
+                let font_y_pos = lineIndex * font_height;
+
+                if (font_y_pos >= max_height)
+                    break;
+
                 for (let partIndex = 0; partIndex < parts.length; partIndex++) {
                     const part = parts[partIndex];
-                    for (let index = 0; index < part.string.length; index++) {
-                        let char = part.string.charAt(index);
+                    for (let i = 0; i < part.string.length; i++) {
+                        let char = part.string.charAt(i);
                         if (!font_object.width_array[char] || !font_object.map[char])
                             continue;
+
                         const font_width = font_object.width_array[char] / font_scale;
-                        if (line_width + font_width >= max_width)
-                            break;
-                        line_width += font_width;
+
+                        font_object.canvas_context.globalCompositeOperation = "source-over";
+
+                        if (font_object.canvas.width !== font_object.width_array[char]) {
+                            font_object.canvas.width = font_object.width_array[char];
+                        } else {
+                            font_object.canvas_context.clearRect(
+                                0, 0,
+                                font_object.canvas.width, font_object.canvas.height
+                            );
+                        }
+
+                        this.#drawImage(
+                            font_object.canvas_context, font_object.image,
+                            font_object.map[char][0], font_object.map[char][1],
+                            font_object.canvas.width, font_object.canvas.height,
+                            0, 0,
+                            font_object.canvas.width, font_object.canvas.height
+                        );
+
+                        font_object.canvas_context.globalCompositeOperation = "source-in";
+
+                        this.#fillRect(
+                            font_object.canvas_context, part.color,
+                            0, 0,
+                            font_object.canvas.width, font_object.canvas.height
+                        );
+
+                        this.#drawImage(
+                            string_cache.canvas_context, font_object.canvas,
+                            0, 0, font_object.canvas.width, font_object.canvas.height,
+                            font_aux_x + font_x_pos, font_aux_y + font_y_pos, font_width, font_height
+                        );
+
+                        font_x_pos += font_width;
                     }
                 }
-                font_aux_x = (max_width - line_width) / 2;
+            }
+        }
+
+        this.#drawImage(
+            canvas_context, string_cache.canvas,
+            0, 0, max_width, max_height,
+            x, y, max_width, max_height
+        );
+    }
+
+    #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color, v_center, h_center) {
+        if (!string || !canvas_context || !font_id)
+            return;
+
+        let font_object = this.#find_font(font_id);
+        if (!font_object)
+            return;
+
+        max_width = Math.round(max_width);
+        max_height = Math.round(max_height);
+
+        if (font_object.canvas.height !== font_object.height)
+            font_object.canvas.height = font_object.height;
+
+        if (!canvas_context.string_cache0)
+            canvas_context.string_cache0 = [];
+
+        let string_cache = this.#smartFind(canvas_context.string_cache0, string);
+        let isResized = false;
+
+        if (!string_cache) {
+            string_cache = {
+                px: px,
+                id: string,
+                canvas: new OffscreenCanvas(max_width, max_height),
+            };
+            string_cache.canvas_context = string_cache.canvas.getContext("2d");
+            this.#smartPush(canvas_context.string_cache0, string_cache);
+            isResized = true;
+        }
+
+        if (string_cache.canvas.width !== max_width ||
+            string_cache.canvas.height !== max_height) {
+            string_cache.canvas.width = max_width;
+            string_cache.canvas.height = max_height;
+            isResized = true;
+        }
+
+        if (string_cache.id !== string || string_cache.px !== px) {
+            string_cache.canvas_context.clearRect(0, 0, max_width, max_height);
+            string_cache.px = px;
+            string_cache.id = string;
+            isResized = true;
+        }
+
+        string_cache.canvas_context.pixel_filtering = canvas_context.pixel_filtering;
+        string_cache.canvas_context.pixel_filtering_level = canvas_context.pixel_filtering_level;
+
+        const font_scale = font_object.height / px;
+        const font_height = font_object.height / font_scale;
+
+        if (y + px > max_height)
+            return;
+
+        const splitLine = (line) => {
+            let line_width = 0;
+            let splitLines = [];
+            let currentLine = '';
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line.charAt(i);
+                let char_width = 0;
+
+                if (font_object.width_array[char])
+                    char_width = font_object.width_array[char] / font_scale;
+
+                if (Math.round(line_width + char_width) > max_width || char === '\n') {
+                    splitLines.push(currentLine);
+                    currentLine = char;
+                    line_width = char_width;
+                } else {
+                    currentLine += char;
+                    line_width += char_width;
+                }
             }
 
-            let font_x_pos = 0;
-            let font_y_pos = lineIndex * font_height;
+            if (currentLine)
+                splitLines.push(currentLine);
 
-            for (let partIndex = 0; partIndex < parts.length; partIndex++) {
-                const part = parts[partIndex];
-                for (let i = 0; i < part.string.length; i++) {
-                    let char = part.string.charAt(i);
+            return splitLines;
+        };
+
+        if (isResized) {
+            const lines = splitLine(string);
+
+            const total_text_height = lines.length * font_height;
+            let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
+
+            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                const line = lines[lineIndex];
+                let font_aux_x = 0;
+
+                if (h_center) {
+                    const line_width = line.split('').reduce((acc, char) => {
+                        if (font_object.width_array[char])
+                            return acc + font_object.width_array[char] / font_scale;
+                        return acc;
+                    }, 0);
+                    font_aux_x = (max_width - line_width) / 2;
+                }
+
+                let font_x_pos = 0;
+                let font_y_pos = lineIndex * font_height;
+
+                if (font_y_pos >= max_height)
+                    break;
+
+                for (let i = 0; i < line.length; i++) {
+                    let char = line.charAt(i);
                     if (!font_object.width_array[char] || !font_object.map[char])
                         continue;
 
                     const font_width = font_object.width_array[char] / font_scale;
-
-                    if (font_y_pos >= max_height)
-                        break;
 
                     font_object.canvas_context.globalCompositeOperation = "source-over";
 
@@ -1505,141 +1746,40 @@ class iLGE_2D_Engine {
                         font_object.canvas.width, font_object.canvas.height
                     );
 
-                    font_object.canvas_context.globalCompositeOperation = "source-in";
-
-                    this.#fillRect(
-                        font_object.canvas_context, part.color,
-                        0, 0,
-                        font_object.canvas.width, font_object.canvas.height
-                    );
-
                     this.#drawImage(
-                        canvas_context, font_object.canvas,
+                        string_cache.canvas_context, font_object.canvas,
                         0, 0, font_object.canvas.width, font_object.canvas.height,
-                        x + font_aux_x + font_x_pos, y + font_aux_y + font_y_pos, font_width, font_height
+                        font_x_pos + font_aux_x, font_y_pos + font_aux_y, font_width, font_height
                     );
 
                     font_x_pos += font_width;
                 }
             }
         }
+
+        string_cache.canvas_context.globalCompositeOperation = "source-in";
+        this.#fillRect(
+            string_cache.canvas_context, color,
+            0, 0, max_width, max_height
+        );
+        string_cache.canvas_context.globalCompositeOperation = "source-over";
+
+        this.#drawImage(
+            canvas_context, string_cache.canvas,
+            0, 0, max_width, max_height,
+            x, y, max_width, max_height
+        );
     }
 
-    #drawText(string, canvas_context, max_width, max_height, font_id, x, y, px, color, v_center, h_center) {
-        if (!string || !canvas_context || !font_id)
-            return;
-
-        let font_object = this.#find_font(font_id);
-        if (!font_object)
-            return;
-
-        if (font_object.canvas.height !== font_object.height)
-            font_object.canvas.height = font_object.height;
-
-        const font_scale = font_object.height / px;
-        const font_height = font_object.height / font_scale;
-
-        if (y + px > max_height)
-            return;
-
-        const splitLine = (line) => {
-            let line_width = 0;
-            let splitLines = [];
-            let currentLine = '';
-
-            for (let i = 0; i < line.length; i++) {
-                const char = line.charAt(i);
-                let char_width = 0;
-
-                if (font_object.width_array[char])
-                    char_width = font_object.width_array[char] / font_scale;
-
-                if (line_width + char_width > max_width || char === '\n') {
-                    splitLines.push(currentLine);
-                    currentLine = char;
-                    line_width = char_width;
-                } else {
-                    currentLine += char;
-                    line_width += char_width;
-                }
-            }
-
-            if (currentLine)
-                splitLines.push(currentLine);
-
-            return splitLines;
-        };
-
-        const lines = splitLine(string);
-
-        const total_text_height = lines.length * font_height;
-        let font_aux_y = v_center ? (max_height - total_text_height) / 2 : 0;
-
-        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-            const line = lines[lineIndex];
-            let font_aux_x = 0;
-
-            if (h_center) {
-                const line_width = line.split('').reduce((acc, char) => {
-                    if (font_object.width_array[char])
-                        return acc + font_object.width_array[char] / font_scale;
-                    return acc;
-                }, 0);
-                font_aux_x = (max_width - line_width) / 2;
-            }
-
-            let font_x_pos = 0;
-            let font_y_pos = lineIndex * font_height;
-
-            for (let i = 0; i < line.length; i++) {
-                let char = line.charAt(i);
-                if (!font_object.width_array[char] || !font_object.map[char])
-                    continue;
-
-                const font_width = font_object.width_array[char] / font_scale;
-
-                if (font_y_pos >= max_height)
-                    break;
-
-                font_object.canvas_context.globalCompositeOperation = "source-over";
-
-                if (font_object.canvas.width !== font_object.width_array[char]) {
-                    font_object.canvas.width = font_object.width_array[char];
-                } else {
-                    font_object.canvas_context.clearRect(
-                        0, 0,
-                        font_object.canvas.width, font_object.canvas.height
-                    );
-                }
-
-                this.#drawImage(
-                    font_object.canvas_context, font_object.image,
-                    font_object.map[char][0], font_object.map[char][1],
-                    font_object.canvas.width, font_object.canvas.height,
-                    0, 0,
-                    font_object.canvas.width, font_object.canvas.height
-                );
-
-                font_object.canvas_context.globalCompositeOperation = "source-in";
-
-                this.#fillRect(
-                    font_object.canvas_context, color,
-                    0, 0,
-                    font_object.canvas.width, font_object.canvas.height
-                );
-
-                this.#drawImage(
-                    canvas_context, font_object.canvas,
-                    0, 0, font_object.canvas.width, font_object.canvas.height,
-                    x + font_x_pos + font_aux_x, y + font_y_pos + font_aux_y, font_width, font_height
-                );
-
-                font_x_pos += font_width;
-            }
-        }
-    }
-
-    #draw_camera_scene(camera, vcamera, z_order) {
+    /**
+     * 
+     * @param {iLGE_2D_Object_Element_Camera_Viewer} viewer 
+     * @param {iLGE_2D_Object} camera 
+     * @param {iLGE_2D_Object} vcamera 
+     * @param {Number} z_order 
+     * @returns 
+     */
+    #draw_camera_scene(viewer, camera, vcamera, z_order) {
         let z_order_find = false;
         for (let object of camera.scene.objects) {
             switch (object.type) {
@@ -1651,19 +1791,46 @@ class iLGE_2D_Engine {
                         let object_width = object.width * camera.scale_output;
                         let object_height = object.height * camera.scale_output;
                         let object_half_size = [object_width / 2, object_height / 2];
-                        camera.canvas_context.save();
-                        camera.canvas_context.translate(
+                        let offset = new iLGE_2D_Vector2(
                             object.x * camera.scale_output + object_half_size[0],
                             object.y * camera.scale_output + object_half_size[1]
                         );
-                        camera.canvas_context.rotate((Math.PI / 180) * object.rotation);
+                        let rotation = (Math.PI / 180) * object.rotation;
+                        viewer.canvas_context.save();
+                        viewer.canvas_context.translate(
+                            offset.x,
+                            offset.y
+                        );
+                        viewer.canvas_context.rotate(rotation);
                         for (let element of object.element) {
-                            if (!element.visible)
+                            if (!element.visible &&
+                                (element.type !== iLGE_2D_Object_Element_Type_Collider && this.debug))
                                 continue;
+                            viewer.canvas_context.globalAlpha = element.opacity;
+
                             switch (element.type) {
+                                case iLGE_2D_Object_Element_Type_Collider:
+                                    let colliderPosition = new iLGE_2D_Vector2(
+                                        object.x * camera.scale_output + element.x * camera.scale_output,
+                                        object.y * camera.scale_output + element.y * camera.scale_output
+                                    );
+                                    let elementSize = [
+                                        element.width * camera.scale_output,
+                                        element.height * camera.scale_output
+                                    ];
+
+                                    viewer.canvas_context.fillStyle = "#000000";
+                                    viewer.canvas_context.globalAlpha = 0.15;
+                                    viewer.canvas_context.fillRect(
+                                        colliderPosition.x - offset.x,
+                                        colliderPosition.y - offset.y,
+                                        elementSize[0],
+                                        elementSize[1]
+                                    );
+                                    break;
                                 case iLGE_2D_Object_Element_Type_Rectangle:
                                     this.#fillRect(
-                                        camera.canvas_context, element.color,
+                                        viewer.canvas_context, element.color,
                                         -object_half_size[0] * object.scale,
                                         -object_half_size[1] * object.scale,
                                         object_width * object.scale,
@@ -1672,7 +1839,7 @@ class iLGE_2D_Engine {
                                     break;
                                 case iLGE_2D_Object_Element_Type_Sprite:
                                     this.#drawImage(
-                                        camera.canvas_context, element.image,
+                                        viewer.canvas_context, element.image,
                                         element.src_x, element.src_y,
                                         element.src_width, element.src_height,
                                         -object_half_size[0] * object.scale,
@@ -1684,7 +1851,7 @@ class iLGE_2D_Engine {
                                 case iLGE_2D_Object_Element_Type_Text:
                                     if (element.styled_text)
                                         this.#drawTextWithStyles(
-                                            element.string, camera.canvas_context,
+                                            element.string, viewer.canvas_context,
                                             object_width * object.scale,
                                             object_height * object.scale,
                                             element.font_id,
@@ -1696,7 +1863,7 @@ class iLGE_2D_Engine {
                                         );
                                     else
                                         this.#drawText(
-                                            element.string, camera.canvas_context,
+                                            element.string, viewer.canvas_context,
                                             object_width * object.scale,
                                             object_height * object.scale,
                                             element.font_id,
@@ -1709,7 +1876,7 @@ class iLGE_2D_Engine {
                                     break;
                             }
                         }
-                        camera.canvas_context.restore();
+                        viewer.canvas_context.restore();
                     }
                     break;
             }
@@ -1718,28 +1885,42 @@ class iLGE_2D_Engine {
     }
 
     /**
-    * @param camera {iLGE_2D_Object}
-    */
-    #draw_camera(camera, object, x, y, width, height) {
+     * 
+     * @param {iLGE_2D_Object} camera 
+     * @param {iLGE_2D_Object_Element_Camera_Viewer} viewer 
+     * @param {Number} x 
+     * @param {Number} y 
+     * @param {Number} width 
+     * @param {Number} height 
+     */
+    #draw_camera(camera, viewer, x, y, width, height) {
         if (!camera || camera.type !== iLGE_2D_Object_Type_Camera || !camera.scene)
             return;
-        if (!camera.canvas) {
-            camera.canvas = new OffscreenCanvas(1, 1);
-            camera.canvas_context = camera.canvas.getContext("2d");
+        if (!viewer.canvas) {
+            viewer.canvas = new OffscreenCanvas(1, 1);
+            viewer.canvas_context = viewer.canvas.getContext("2d");
         }
         let scale = 1;
         if (camera.scale > 0) {
             scale = Math.min(
-                object.width / camera.scale,
-                object.height / camera.scale
+                width / camera.scale,
+                height / camera.scale
             );
         }
         camera.scale_output = scale;
-        camera.width = object.width / scale;
-        camera.height = object.height / scale;
-        camera.canvas.width = object.width;
-        camera.canvas.height = object.height;
-        camera.canvas_context.imageSmoothingEnabled = false;
+        camera.width = width / scale;
+        camera.height = height / scale;
+        viewer.canvas.width = width;
+        viewer.canvas.height = height;
+
+        if (camera.scale_output !== 1) {
+            viewer.canvas_context.pixel_filtering = viewer.pixel_filtering;
+            viewer.canvas_context.pixel_filtering_level = viewer.pixel_filtering_level;
+        }
+        else {
+            viewer.canvas_context.pixel_filtering = false;
+        }
+
         let vcamera = new iLGE_2D_Object(
             null, null, iLGE_2D_Object_Type_Camera,
             camera.x, camera.y,
@@ -1757,21 +1938,21 @@ class iLGE_2D_Engine {
         let camera_width = camera.width * camera.scale_output;
         let camera_height = camera.height * camera.scale_output;
         let halfSize = [camera_width / 2, camera_height / 2];
-        camera.canvas_context.save();
+        viewer.canvas_context.save();
         for (let element of camera.element) {
             if (!element.visible)
                 continue;
             switch (element.type) {
                 case iLGE_2D_Object_Element_Type_Rectangle:
                     this.#fillRect(
-                        camera.canvas_context, element.color,
+                        viewer.canvas_context, element.color,
                         0, 0,
                         camera_width, camera_height
                     );
                     break;
                 case iLGE_2D_Object_Element_Type_Sprite:
                     this.#drawImage(
-                        camera.canvas_context, element.image,
+                        viewer.canvas_context, element.image,
                         element.src_x, element.src_y,
                         element.src_width, element.src_height,
                         0, 0,
@@ -1780,30 +1961,30 @@ class iLGE_2D_Engine {
                     break;
             }
         }
-        camera.canvas_context.translate(
+        viewer.canvas_context.translate(
             halfSize[0],
             halfSize[1]
         );
-        camera.canvas_context.rotate(-camera.rotation * (Math.PI / 180));
-        camera.canvas_context.translate(
+        viewer.canvas_context.rotate(-camera.rotation * (Math.PI / 180));
+        viewer.canvas_context.translate(
             -camera.x * camera.scale_output - halfSize[0],
             -camera.y * camera.scale_output - halfSize[1]
         );
         let z_order_info = this.#getZOrderInfo(camera.scene.objects);
         for (let z_order = z_order_info.min; z_order <= z_order_info.max; z_order++) {
-            this.#draw_camera_scene(camera, vcamera, z_order);
+            this.#draw_camera_scene(viewer, camera, vcamera, z_order);
         }
-        camera.canvas_context.restore();
+        viewer.canvas_context.restore();
         if (this.debug) {
-            camera.canvas_context.strokeStyle = "#000000";
-            camera.canvas_context.strokeRect(
+            viewer.canvas_context.strokeStyle = "#000000";
+            viewer.canvas_context.strokeRect(
                 (vcamera.x - camera.x) * camera.scale_output, (vcamera.y - camera.y) * camera.scale_output,
                 vcamera.width * camera.scale_output, vcamera.height * camera.scale_output
             );
         }
         this.#drawImage(
-            this.canvas_context, camera.canvas,
-            0, 0, camera.canvas.width, camera.canvas.height,
+            this.canvas_context, viewer.canvas,
+            0, 0, viewer.canvas.width, viewer.canvas.height,
             x, y, width, height
         );
     }
@@ -1829,7 +2010,10 @@ class iLGE_2D_Engine {
         if (!newframe || !effect_spritesheet || !effect_size)
             return null;
 
-        let _effect_size = Math.max(effect_size, effect_size * effect_scale);
+        effect_size = Math.round(effect_size);
+
+        let _effect_size = Math.max(effect_size, Math.round(effect_size * effect_scale));
+        _effect_size += _effect_size % effect_size;
 
         if (!effect_spritesheet.effectCache) {
             effect_spritesheet.effectCache = {
@@ -1842,7 +2026,6 @@ class iLGE_2D_Engine {
 
         const cache = effect_spritesheet.effectCache;
 
-        effect_size = Math.floor(effect_size);
         effect_sprite_index = Math.min(Math.max(0, Math.floor(effect_sprite_index)), cache.maxIndex - 1);
 
         if (cache.canvas.width !== _effect_size || cache.canvas.height !== _effect_size)
@@ -1929,17 +2112,43 @@ class iLGE_2D_Engine {
                         object_height = object.height * object_scale;
                     object.scale_output = object_scale;
                     let object_half_size = [object_width / 2, object_height / 2];
-                    this.canvas_context.save();
-                    this.canvas_context.translate(
+                    let offset = new iLGE_2D_Vector2(
                         object.x + object_half_size[0],
                         object.y + object_half_size[1]
                     );
+
+                    this.canvas_context.save();
+                    this.canvas_context.translate(
+                        offset.x,
+                        offset.y
+                    );
                     this.canvas_context.rotate((Math.PI / 180) * object.rotation);
                     for (let element of object.element) {
-                        if (!element.visible)
+                        if (!element.visible &&
+                            (element.type !== iLGE_2D_Object_Element_Type_Collider && this.debug))
                             continue;
-                        this.canvas_context.imageSmoothingEnabled = false;
+                        this.canvas_context.globalAlpha = element.opacity;
+
                         switch (element.type) {
+                            case iLGE_2D_Object_Element_Type_Collider:
+                                let colliderPosition = new iLGE_2D_Vector2(
+                                    object.x + element.x,
+                                    object.y + element.y
+                                );
+                                let elementSize = [
+                                    element.width,
+                                    element.height
+                                ];
+
+                                this.canvas_context.fillStyle = "#000000";
+                                this.canvas_context.globalAlpha = 0.15;
+                                this.canvas_context.fillRect(
+                                    colliderPosition.x - offset.x,
+                                    colliderPosition.y - offset.y,
+                                    elementSize[0],
+                                    elementSize[1]
+                                );
+                                break;
                             case iLGE_2D_Object_Element_Type_Rectangle:
                                 this.#fillRect(
                                     this.canvas_context, element.color,
@@ -1988,7 +2197,7 @@ class iLGE_2D_Engine {
                                 break;
                             case iLGE_2D_Object_Element_Type_Camera_Viewer:
                                 this.#draw_camera(
-                                    element.camera, object,
+                                    element.camera, element,
                                     -object_half_size[0],
                                     -object_half_size[1],
                                     object_width,
@@ -2047,23 +2256,85 @@ class iLGE_2D_Engine {
 
     /**
      * 
+     * @param {iLGE_2D_Object} object1 
+     * @param {iLGE_2D_Object} object2 
      * @param {iLGE_2D_Object} tmp_object1 
      * @param {iLGE_2D_Object} tmp_object2 
      * @param {Number} startX 
      * @param {Number} startY 
      * @param {Number} endX 
      * @param {Number} endY 
+     * @param {Boolean} checkRotation 
      * @returns 
      */
-    #checkContinuousCollision(tmp_object1, tmp_object2, startX, startY, endX, endY) {
-        const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY), 1);
+    #checkContinuousCollision(
+        object1, object2,
+        tmp_object1, tmp_object2,
+        startX, startY,
+        endX, endY,
+        checkRotation
+    ) {
+        const cache0 = endX - startX,
+            cache1 = endY - startY,
+            cache2 = object1.rotation - object1.old_rotation,
+            cache3 = object2.rotation - object2.old_rotation;
+
+        let steps, steps1 = Math.max(Math.abs(cache3), 1);
+        if (checkRotation)
+            steps = Math.max(Math.abs(cache0), Math.abs(cache1), Math.abs(cache2), 1);
+        else
+            steps = Math.max(Math.abs(cache0), Math.abs(cache1), 1);
+
+        let collisionPoint = null;
+
+        const increments0 = 1 / steps, increments1 = 1 / steps1;
+
+        for (let t = 0; t <= 1; t += increments0) {
+            tmp_object1.x = startX + t * cache0;
+            tmp_object1.y = startY + t * cache1;
+            if (checkRotation)
+                tmp_object1.rotation = object1.old_rotation + t * cache2;
+            tmp_object1.prepareForCollision();
+
+            for (let u = 0; u <= 1; u += increments1) {
+                tmp_object2.rotation = object2.old_rotation + u * cache3;
+                tmp_object2.prepareForCollision();
+
+                if (this.#collision_detection(tmp_object1, tmp_object2)) {
+                    collisionPoint = {
+                        x: tmp_object1.x,
+                        y: tmp_object1.y
+                    };
+                    return collisionPoint;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} object
+     * @param {iLGE_2D_Object} tmp_object1 
+     * @param {iLGE_2D_Object} tmp_object2 
+     * @param {Number} startRotation 
+     * @param {Number} endRotation 
+     * @returns 
+     */
+    #checkContinuousRotationCollision(
+        object,
+        tmp_object1, tmp_object2
+    ) {
+        const cache0 = object.rotation - object.old_rotation;
+
+        let steps = Math.max(Math.abs(cache0), 1);
+
         let collisionPoint = null;
 
         const increments = 1 / steps;
 
         for (let t = 0; t <= 1; t += increments) {
-            tmp_object1.x = startX + t * (endX - startX);
-            tmp_object1.y = startY + t * (endY - startY);
+            tmp_object1.rotation = object.old_rotation + t * cache0;
             tmp_object1.prepareForCollision();
 
             if (this.#collision_detection(tmp_object1, tmp_object2)) {
@@ -2077,6 +2348,66 @@ class iLGE_2D_Engine {
         return collisionPoint;
     }
 
+    #rotatePoint(point, vector, origin) {
+        const cos = vector.x;
+        const sin = vector.y;
+        const x = point.x - origin.x;
+        const y = point.y - origin.y;
+        return new iLGE_2D_Vector2(
+            cos * x - sin * y + origin.x,
+            sin * x + cos * y + origin.y
+        );
+    }
+
+    #getElementPosition(object, element) {
+        const objectCenter = new iLGE_2D_Vector2(
+            object.x + (object.width / 2 - element.width / 2),
+            object.y + (object.height / 2 - element.height / 2)
+        );
+        const offsetPoint = new iLGE_2D_Vector2(
+            object.x + element.x,
+            object.y + element.y
+        );
+        const rotatedOffsetPoint = this.#rotatePoint(
+            offsetPoint,
+            new iLGE_2D_Vector2(object.radians_cos, object.radians_sin),
+            objectCenter
+        );
+        return new iLGE_2D_Vector2(
+            rotatedOffsetPoint.x,
+            rotatedOffsetPoint.y
+        );
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} target 
+     * @param {Array} array
+     * @param {Array} exclude_array 
+     */
+    #getNearestObject(target, array, exclude_array = []) {
+        if (!target || !array)
+            return null;
+        let lastDiff = Infinity;
+        let ret = null;
+        let x1 = target.x + target.width / 2,
+            y1 = target.y + target.height / 2;
+        for (const object of array) {
+            if (object.id === target.id || exclude_array.includes(object))
+                continue;
+            let x2 = object.x + object.width / 2,
+                y2 = object.y + object.height / 2;
+            let diffX = x1 - x2,
+                diffY = y1 - y2;
+            let diff = Math.abs(diffX) + Math.abs(diffY);
+            if (lastDiff > diff) {
+                ret = object;
+                lastDiff = diff;
+            }
+        }
+        return ret;
+    }
+
     /**
      * 
      * @param {iLGE_2D_Object} tmp_object1 
@@ -2087,16 +2418,30 @@ class iLGE_2D_Engine {
     #check_object_collision(tmp_object1, element1, object1, object2, isBlocker) {
         for (let element2 of object2.element) {
             if (element2.type === iLGE_2D_Object_Element_Type_Collider) {
+                let colliderPosition = this.#getElementPosition(object2, element2);
+
                 let tmp_object2 = new iLGE_2D_Object(
                     null, null, iLGE_2D_Object_Type_Custom,
-                    object2.x + element2.x, object2.y + element2.y,
+                    colliderPosition.x, colliderPosition.y,
                     object2.rotation, object2.scale,
                     element2.width, element2.height,
                 );
                 tmp_object2.prepareForCollision();
 
+                let collisionPoint1 = this.#checkContinuousRotationCollision(
+                    object2, tmp_object2, tmp_object1
+                );
+
+                if (!collisionPoint1 && !isBlocker)
+                    collisionPoint1 = this.#checkContinuousRotationCollision(
+                        object1, tmp_object1, tmp_object2
+                    );
+
                 if (!this.#smartFind(element2.incorporeal_objects, object1.id) &&
-                    this.#collision_detection(tmp_object1, tmp_object2)) {
+                    collisionPoint1) {
+                    this.#smartPush(element1.collided_objects, object2);
+                    this.#smartPush(element2.collided_objects, object1);
+
                     if (isBlocker && !element1.blocker && !element1.noclip && element2.blocker) {
                         const velocityX1 = object1.x - object1.old_x;
                         const velocityY1 = object1.y - object1.old_y;
@@ -2107,19 +2452,24 @@ class iLGE_2D_Engine {
                         const relativeVelocityX = velocityX1 - velocityX2;
                         const relativeVelocityY = velocityY1 - velocityY2;
 
-                        const collisionPoint = this.#checkContinuousCollision(
+                        tmp_object1.rotation = object1.rotation;
+
+                        collisionPoint1 = this.#checkContinuousCollision(
+                            object1, object2,
                             tmp_object1, tmp_object2,
                             object1.old_x, object1.old_y,
                             object1.x + relativeVelocityX, object1.y + relativeVelocityY
                         );
 
-                        if (collisionPoint) {
+                        if (collisionPoint1) {
                             const overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
 
+                            object1.rotation = tmp_object1.rotation;
+
                             if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
-                                object1.x = collisionPoint.x - overlap.x;
+                                object1.x = collisionPoint1.x - overlap.x;
                             } else {
-                                object1.y = collisionPoint.y - overlap.y;
+                                object1.y = collisionPoint1.y - overlap.y;
                             }
                         }
 
@@ -2127,9 +2477,6 @@ class iLGE_2D_Engine {
                         tmp_object1.y = object1.y;
                         tmp_object1.prepareForCollision();
                     }
-
-                    this.#smartPush(element1.collided_objects, object2);
-                    this.#smartPush(element2.collided_objects, object1);
                 }
                 else {
                     this.#smartPop(element1.collided_objects, object2);
@@ -2147,22 +2494,28 @@ class iLGE_2D_Engine {
             let object1 = objects_with_collider_element[i];
             for (let element1 of object1.element) {
                 if (element1.type === iLGE_2D_Object_Element_Type_Collider) {
+                    let colliderPosition = this.#getElementPosition(object1, element1);
+
                     let tmp_object1 = new iLGE_2D_Object(
                         null, null, iLGE_2D_Object_Type_Custom,
-                        object1.x + element1.x, object1.y + element1.y,
+                        colliderPosition.x, colliderPosition.y,
                         object1.rotation, object1.scale,
                         element1.width, element1.height,
                     );
                     tmp_object1.prepareForCollision();
+
                     for (let j = i + 1; j < objects_with_collider_element.length; j++) {
                         let object2 = objects_with_collider_element[j];
                         if (object1.id === object2.id)
                             continue;
                         this.#check_object_collision(tmp_object1, element1, object1, object2, false);
                     }
+                    let nearestBlocker = this.#getNearestObject(object1, blocker_objects_with_collider_element);
+                    if (nearestBlocker)
+                        this.#check_object_collision(tmp_object1, element1, object1, nearestBlocker, true);
                     for (let j = 0; j < blocker_objects_with_collider_element.length; j++) {
                         let object2 = blocker_objects_with_collider_element[j];
-                        if (object1 === object2)
+                        if (object1 === object2 || object2 === nearestBlocker)
                             continue;
                         this.#check_object_collision(tmp_object1, element1, object1, object2, true);
                     }
@@ -2301,8 +2654,8 @@ class iLGE_2D_Engine {
     #resize_handler(event, isThis) {
         if (!isThis.auto_resize)
             return;
-        isThis.width = window.innerWidth * window.devicePixelRatio;
-        isThis.height = window.innerHeight * window.devicePixelRatio;
+        isThis.width = Math.round(window.innerWidth * window.devicePixelRatio);
+        isThis.height = Math.round(window.innerHeight * window.devicePixelRatio);
         console.log(`width: ${isThis.width}, height: ${isThis.height};`);
         isThis.canvas.width = isThis.width;
         isThis.canvas.height = isThis.height;
@@ -2727,6 +3080,11 @@ class iLGE_2D_Engine {
         return result;
     }
 
+    clearScreen() {
+        if (this.canvas && this.canvas_context)
+            this.canvas_context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
     setScreenResolution(width, height) {
         this.auto_resize = false;
         this.width = width;
@@ -2749,18 +3107,13 @@ class iLGE_2D_Engine {
         this.loadResourcesFiles(resource_files);
         this.gameid = gameid;
         this.start = this.start.bind(isThis);
+        this.auto_resize = auto_resize ? true : false;
         this.canvas = document.createElement("canvas");
         this.canvas_context = this.canvas.getContext("2d");
-        this.canvas.width = width;
-        this.canvas.height = height;
-        if (auto_resize)
-            this.auto_resize = auto_resize;
-        if (this.auto_resize) {
-            this.canvas.width = window.innerWidth * window.devicePixelRatio;
-            this.canvas.height = window.innerHeight * window.devicePixelRatio;
-        }
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+        this.width = this.canvas.width = width;
+        this.height = this.canvas.height = height;
+
+        this.#resize_handler(null, isThis);
         if ("getGamepads" in navigator) {
             this.gamepad_supported = true;
             window.addEventListener("gamepadconnected", function (event) {
