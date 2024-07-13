@@ -151,6 +151,11 @@ game.start_function = function (engine) {
 		alert("Hello!, It's me " + player.id + "!");
 		this.speed = 8;
 		this.camera_rotation_delay = 4;
+		this.updateCameraPosition = function () {
+            camera.x = this.x - (camera.width - this.width) / 2;
+            camera.y = this.y - (camera.height - this.height) / 2;
+		};
+        this.onCollisionResolved_function = this.updateCameraPosition;
 		camera.speed = 16;
 	};
 
@@ -179,8 +184,7 @@ game.start_function = function (engine) {
 		let vector = this.getRotationVector();
 		this.x += up * -vector.y * this.speed * engine.deltaTime;
 		this.y += up * vector.x * this.speed * engine.deltaTime;
-		camera.x = this.x - (camera.width - this.width) / 2;
-		camera.y = this.y - (camera.height - this.height) / 2;
+		this.updateCameraPosition();
 	};
 
 	/* setup the wall */

@@ -323,7 +323,7 @@ game.start_function = function (engine) {
 
     let transition_effect = new iLGE_2D_Object("Transition_Effect");
     transition_effect.dither = new iLGE_2D_Object_Element_Sprite_Transition_Effect(
-        this.findSourceObject("DitherSprites.png"), "Dither", false, 2
+        this.findSourceObject("DitherSprites.png"), "Dither", false, 4
     );
     transition_effect.addElement(transition_effect.dither);
 
@@ -444,8 +444,8 @@ game.start_function = function (engine) {
     function DitherTransition(engine) {
         transition_effect.width = engine.width;
         transition_effect.height = engine.height;
-        if (transition_effect.dither.src_index < 5 && transition_effect.dither.visible) {
-            transition_effect.dither.src_index += engine.deltaTime * 0.25;
+        if (transition_effect.dither.src_index < 17 && transition_effect.dither.visible) {
+            transition_effect.dither.src_index += engine.deltaTime * 1;
             return true;
         }
         else if (transition_effect.dither.visible) {
@@ -462,8 +462,8 @@ game.start_function = function (engine) {
      * @param {iLGE_2D_Engine} engine 
      */
     player.start_function = function (engine) {
-        this.min_speed = 4;
-        this.max_speed = 8;
+        this.min_speed = 8;
+        this.max_speed = 16;
         this.stamina_level = new iLGE_2D_Object(
             "hud0", null, iLGE_2D_Object_Type_Custom,
             0, 0, 0, 320, 9 * 4, 16
@@ -515,11 +515,13 @@ game.start_function = function (engine) {
         engine.addObject(this.stamina_hud_green);
         this.collider = new iLGE_2D_Object_Element_Collider(
             false, false, this.id + "_collder",
-            0, 0, this.width, this.height
+            0, 0, 16, 16
         );
+        this.collider.x = (this.width - this.collider.width) / 2;
+        this.collider.y = (this.height - this.collider.height) / 2;
         console.log("Hello, it's me, " + this.id + "!");
         engine.pointerLock = true;
-        this.max_stamina = 1024;
+        this.max_stamina = 2048;
         this.stamina = this.max_stamina;
         this.gamepad_sensitivity = 16;
         this.mouse_sensitivity = 1 / 4;
@@ -549,6 +551,12 @@ game.start_function = function (engine) {
             if (this.cursor.y > engine.height)
                 this.cursor.y = engine.height - 1;
         };
+
+        this.updateCameraPosition = function () {
+            camera.x = (this.x - (camera.width - this.width) / 2);
+            camera.y = (this.y - (camera.height - this.height) / 2);
+        }
+        this.onCollisionResolved_function = this.updateCameraPosition;
     }
 
     /**
@@ -650,8 +658,7 @@ game.start_function = function (engine) {
             if (this.stamina > this.max_stamina)
                 this.stamina = this.max_stamina;
         }
-        camera.x = (this.x - (camera.width - this.width) / 2);
-        camera.y = (this.y - (camera.height - this.height) / 2);
+        this.updateCameraPosition();
         if (camera.rotation < this.rotation) {
             camera.rotation +=
                 (this.rotation - camera.rotation) / this.camera_rotation_delay *

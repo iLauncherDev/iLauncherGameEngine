@@ -1,3 +1,8 @@
+# 0.4.3
+    added onCollisionResolved_function variable in iLGE_2D_Object class
+    improved collision
+    fixed debug mode
+
 # 0.4.2
     improved camera rendering in iLGE_2D_Engine class
     added pixel filtering in iLGE_2D_Engine class
