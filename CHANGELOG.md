@@ -1,3 +1,9 @@
+# 0.4.4
+    time_diff variable is public now
+    added object scaling mode support
+    added setAudioLoop and setAudioSpeed function in iLGE_2D_Source class
+    new text alignment
+
 # 0.4.3
     added onCollisionResolved_function variable in iLGE_2D_Object class
     improved collision

@@ -477,7 +477,7 @@ game.start_function = function (engine) {
                 "PDV437", "PDV437", null, 16, "#000000", true
             )
         );
-        this.game_title.element[0].alignment_center.horizontal = true;
+        this.game_title.element[0].alignment.horizontal = "center";
         this.game_title.element[0].styled_text = true;
         this.cursor = new iLGE_2D_Object(
             "hud2", "cursor", iLGE_2D_Object_Type_Custom,
