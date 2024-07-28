@@ -26,7 +26,7 @@ Features:
 - click in the "Extensions" or Press Ctrl+Shift+X Keys and search for "Live Server".
 - install extension called "Live Server".
 - prepare your working folder.
-- download the file named [iLGE-2d.js](https://raw.githubusercontent.com/iLauncherDev/iLauncherGameEngine/main/iLGE-2d.js "Open the context menu and click 'Save link as' or something like that") to your working folder.
+- download the files named [iLGE-2d.js](https://raw.githubusercontent.com/iLauncherDev/iLauncherGameEngine/main/iLGE-2d.js "Open the context menu and click 'Save link as' or something like that") and [iLGE-Canvas.js](https://raw.githubusercontent.com/iLauncherDev/iLauncherGameEngine/main/iLGE-Canvas.js "Open the context menu and click 'Save link as' or something like that") to your working folder.
 - create the files to your working folder below:
 
 index.html:
@@ -37,6 +37,7 @@ index.html:
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>My First Game</title>
+	<script src="iLGE-Canvas.js" type="text/javascript"></script>
 	<script src="iLGE-2d.js" type="text/javascript"></script>
 	<style type="text/css">
 		html, body {

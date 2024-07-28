@@ -1,3 +1,6 @@
+# 0.5.0
+    implemented WebGL
+
 # 0.4.4
     time_diff variable is public now
     added object scaling mode support

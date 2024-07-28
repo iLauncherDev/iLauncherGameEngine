@@ -313,11 +313,13 @@ game.start_function = function (engine) {
     let clang_audio = this.findSourceObject("clang.ogg");
     let camera = new iLGE_2D_Object("MyCamera", "camera", iLGE_2D_Object_Type_Camera, 0, 0, 0, 360, 0, 0, scene);
     let camera_hud = new iLGE_2D_Object("MyCameraHud", "camera_hud");
-    camera_hud.addElement(
-        new iLGE_2D_Object_Element_Camera_Viewer(
-            camera, "Hud", true
-        )
+    camera_hud.viewer = new iLGE_2D_Object_Element_Camera_Viewer(
+        camera, "Hud", true
     );
+    camera_hud.addElement(
+        camera_hud.viewer
+    );
+    camera_hud.viewer.best_quality = true;
 
     let transition_ended = false, transition_loop = false;
 
@@ -333,36 +335,7 @@ game.start_function = function (engine) {
         new iLGE_2D_Object_Element_Rectangle("#0000ff", "wall", true)
     );
 
-    let room_index = 0;
     let transition_toggle = false;
-
-    function createRoom(wall_size, room_size, wall_speed, rotation_range) {
-        let wall_collider = new iLGE_2D_Object_Element_Collider(
-            true, false, "wall_collder", 0, 0, wall_size, wall_size
-        );
-        for (let i = 0; i < room_size; i++) {
-            for (let j = 0; j < room_size; j++) {
-                if (i === 0 || i === room_size - 1 || j === 0 || j === room_size - 1) {
-                    let wall = new iLGE_2D_Object(
-                        "wall" + (room_index++), "wall", iLGE_2D_Object_Type_Custom,
-                        wall_size * j, wall_size * i, Math.random() * rotation_range, 1,
-                        wall_size, wall_size
-                    );
-                    wall.speed = wall_speed;
-                    wall.update_function = function (engine) {
-                        this.rotation += this.speed * engine.deltaTime;
-                    };
-                    wall.addElement(
-                        new iLGE_2D_Object_Element_Rectangle("#ffff00", "wall", true)
-                    );
-                    wall.addElement(
-                        wall_collider
-                    );
-                    scene.addObject(wall);
-                }
-            }
-        }
-    }
 
     camera.addElement(
         new iLGE_2D_Object_Element_Rectangle("#ffffff", "wall", true)
