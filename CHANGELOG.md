@@ -1,3 +1,7 @@
+# 0.5.1
+    added audio direction
+    small optimizations
+
 # 0.5.0
     implemented WebGL
 
