@@ -4,7 +4,7 @@
 // (or any later version) published by the Free Software Foundation.
 // You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
 
-const iLGE_2D_Version = "0.5.0";
+const iLGE_2D_Version = "0.5.1";
 const iLGE_2D_Object_ScalingMode_Default = "default";
 const iLGE_2D_Object_ScalingMode_None = "none";
 const iLGE_2D_Object_Element_Type_Sprite = "Sprite";
@@ -126,9 +126,13 @@ class iLGE_2D_Source {
         source.buffer = this.source.Abuffer;
         source.root = this.source;
 
+        source.stereoPanner = this.source.createStereoPanner();
+        source.stereoPanner.pan.value = 0;
+        source.stereoPanner.connect(this.source.destination);
+
         source.analyser = this.source.createAnalyser();
         source.analyser.fftSize = 256;
-        source.analyser.connect(this.source.destination);
+        source.analyser.connect(source.stereoPanner);
 
         source.volume = this.source.createGain();
         source.volume.gain.value = 1;
@@ -179,6 +183,12 @@ class iLGE_2D_Source {
             return;
         source.audioSpeed = value;
         source.playbackRate.value = source.audioSpeed;
+    }
+
+    setAudioDirection(source, direction = 0) {
+        if (!this.compareSourceType(iLGE_2D_Source_Type_Audio) || !source || !source.root)
+            return;
+        source.stereoPanner.pan.value = direction;
     }
 
     getAudioVolumeAverage(source) {
@@ -427,6 +437,7 @@ class iLGE_2D_Object_Element_Collider {
     y = 0;
     width = 0;
     height = 0;
+    rotation = 0;
 
     /**
      * 
@@ -757,15 +768,6 @@ class iLGE_2D_Scene {
 
     removeObject(id) {
         this.#smartPop(this.objects, this.#smartFind(this.objects, id));
-        for (let object of this.objects) {
-            if (object.type === iLGE_2D_Object_Type_Custom) {
-                for (let element of object.element) {
-                    if (element.type === iLGE_2D_Object_Element_Type_Collider) {
-                        this.#smartClean(element.collided_objects, this.objects);
-                    }
-                }
-            }
-        }
     }
 
     constructor(id = "SCENEID", class_id = "CLASS", enabled = true) {
@@ -799,6 +801,7 @@ class iLGE_2D_Object {
     speed = 0;
     max_speed = 0;
     element = [];
+    _element_positions = [];
     reset = true;
     start_function = 0;
     update_function = 0;
@@ -809,6 +812,14 @@ class iLGE_2D_Object {
     old_radians = 0;
     old_radians_cos = 0;
     old_radians_sin = 0;
+    aabb_info = {
+        x: 0, y: 0,
+        width: 0, height: 0,
+    };
+    old_aabb_info = {
+        x: 0, y: 0,
+        width: 0, height: 0,
+    };
     vertices = [];
     original_vertices = [];
     old_vertices = [];
@@ -913,14 +924,31 @@ class iLGE_2D_Object {
         return new iLGE_2D_Vector2(x, y);
     }
 
+    #getAABB(vertices) {
+        let minX = vertices[0].x, maxX = vertices[0].x;
+        let minY = vertices[0].y, maxY = vertices[0].y;
+
+        for (let i = 1; i < vertices.length; i++) {
+            minX = Math.min(minX, vertices[i].x);
+            maxX = Math.max(maxX, vertices[i].x);
+            minY = Math.min(minY, vertices[i].y);
+            maxY = Math.max(maxY, vertices[i].y);
+        }
+
+        return {
+            x: minX, y: minY,
+            width: maxX - minX, height: maxY - minY,
+        };
+    }
+
     prepareForCollision() {
         let halfSize = this.getHalfSize();
         this.radians = (Math.PI / 180) * this.rotation;
         this.radians_cos = Math.cos(this.radians);
         this.radians_sin = Math.sin(this.radians);
         this.old_radians = (Math.PI / 180) * this.old_rotation;
-        this.old_radians_cos = Math.cos(this.radians);
-        this.old_radians_sin = Math.sin(this.radians);
+        this.old_radians_cos = Math.cos(this.old_radians);
+        this.old_radians_sin = Math.sin(this.old_radians);
         let rotation_vector = new iLGE_2D_Vector2(this.radians_cos, this.radians_sin);
         let old_rotation_vector = new iLGE_2D_Vector2(this.old_radians_cos, this.old_radians_sin);
 
@@ -943,7 +971,7 @@ class iLGE_2D_Object {
             halfSize[0], halfSize[1]
         );
 
-        let offset = [],old_offset=[];
+        let offset = [], old_offset = [];
 
         for (let i = 0; i < vertices.length; i++) {
             old_offset[i] = this.#rotatePoint(vertices[i], old_rotation_vector, vcenter);
@@ -965,6 +993,9 @@ class iLGE_2D_Object {
             this.old_original_vertices[i] = vertices[i].cloneIt().sum(objOldPos);
             this.old_vertices[i] = old_offset[i].cloneIt().sum(objOldPos);
         }
+
+        this.aabb_info = this.#getAABB(this.vertices);
+        this.old_aabb_info = this.#getAABB(this.old_vertices);
     }
 
     constructor(
@@ -1211,15 +1242,6 @@ class iLGE_2D_Engine {
 
     removeObject(id) {
         this.#smartPop(this.#objects, this.#smartFind(this.#objects, id));
-        for (let object of this.#objects) {
-            if (object.type === iLGE_2D_Object_Type_Custom) {
-                for (let element of object.element) {
-                    if (element.type === iLGE_2D_Object_Element_Type_Collider) {
-                        this.#smartClean(element.collided_objects, this.#objects);
-                    }
-                }
-            }
-        }
     }
 
     data_add_item(key, variable) {
@@ -1369,6 +1391,30 @@ class iLGE_2D_Engine {
         return { x: overlapX, y: overlapY };
     }
 
+    /**
+     * 
+     * @param {iLGE_2D_Object} object1 
+     * @param {iLGE_2D_Object} object2 
+     * @returns {Boolean}
+     */
+    #aabb_collision_detection(object1, object2) {
+        let aabb1 = object1.aabb_info;
+        let aabb2 = object2.aabb_info;
+
+        let aabb1_left = aabb1.x;
+        let aabb1_right = aabb1.x + aabb1.width;
+        let aabb1_top = aabb1.y;
+        let aabb1_bottom = aabb1.y + aabb1.height;
+
+        let aabb2_left = aabb2.x;
+        let aabb2_right = aabb2.x + aabb2.width;
+        let aabb2_top = aabb2.y;
+        let aabb2_bottom = aabb2.y + aabb2.height;
+
+        return aabb1_left < aabb2_right && aabb2_left < aabb1_right &&
+            aabb1_top < aabb2_bottom && aabb2_top < aabb1_bottom;
+    }
+
 
     /**
      * 
@@ -1377,6 +1423,9 @@ class iLGE_2D_Engine {
      * @returns {Boolean}
      */
     #collision_detection(object1, object2) {
+        if (!this.#aabb_collision_detection(object1, object2))
+            return false;
+
         let cos1 = object1.radians_cos;
         let sin1 = object1.radians_sin;
         let cos2 = object2.radians_cos;
@@ -1403,7 +1452,7 @@ class iLGE_2D_Engine {
                 min2 = Math.min(min2, dot);
                 max2 = Math.max(max2, dot);
             }
-            if (max1 < min2 || max2 < min1)
+            if (max1 <= min2 || max2 <= min1)
                 return false;
         }
         return true;
@@ -1933,6 +1982,7 @@ class iLGE_2D_Engine {
                                     );
 
                                     viewer.canvas_context.save();
+                                    viewer.canvas_context.rotate((Math.PI / 180) * element.rotation);
                                     viewer.canvas_context.translate(
                                         -offset.x,
                                         -offset.y
@@ -2053,8 +2103,6 @@ class iLGE_2D_Engine {
             vcamera.x += (camera.width / 2) / 2;
             vcamera.y += (camera.height / 2) / 2;
         }
-        vcamera.x += 1, vcamera.y += 1;
-        vcamera.width -= 2, vcamera.height -= 2;
         vcamera.prepareForCollision();
         let camera_width = Math.round(camera.width * camera.scale_output);
         let camera_height = Math.round(camera.height * camera.scale_output);
@@ -2091,6 +2139,7 @@ class iLGE_2D_Engine {
 
         viewer.canvas_context.restore();
         if (this.debug) {
+            viewer.canvas_context.setStrokeLineWidth(camera.scale_output);
             viewer.canvas_context.strokeRect(
                 "#000000",
                 (vcamera.x - camera.x) * camera.scale_output, (vcamera.y - camera.y) * camera.scale_output,
@@ -2251,6 +2300,7 @@ class iLGE_2D_Engine {
                                 ];
 
                                 this.canvas_context.save();
+                                this.canvas_context.rotate((Math.PI / 180) * element.rotation);
                                 this.canvas_context.setGlobalAlpha(0.15);
                                 this.canvas_context.fillRect(
                                     "#000000",
@@ -2371,175 +2421,52 @@ class iLGE_2D_Engine {
 
     /**
      * 
-     * @param {iLGE_2D_Object} object1 
-     * @param {iLGE_2D_Object} object2 
-     * @param {iLGE_2D_Object} tmp_object1 
-     * @param {iLGE_2D_Object} tmp_object2 
-     * @param {Number} startX 
-     * @param {Number} startY 
-     * @param {Number} endX 
-     * @param {Number} endY 
-     * @param {Boolean} checkRotation
-     * @returns 
+     * @param {iLGE_2D_Object} object 
      */
-    #checkContinuousCollision(
-        object1, object2,
-        tmp_object1, tmp_object2,
-        startX, startY,
-        endX, endY,
-        checkRotation
-    ) {
-        const cache0 = endX - startX,
-            cache1 = endY - startY,
-            cache2 = object1.rotation - object1.old_rotation,
-            cache3 = object2.rotation - object2.old_rotation;
+    #createAABBSwept(object) {
+        const minX = Math.min(object.old_aabb_info.x, object.aabb_info.x);
+        const maxX = Math.max(object.old_aabb_info.x, object.aabb_info.x);
+        const minY = Math.min(object.old_aabb_info.y, object.aabb_info.y);
+        const maxY = Math.max(object.old_aabb_info.y, object.aabb_info.y);
 
-        let steps, steps1 = Math.max(Math.abs(cache3));
-        if (checkRotation)
-            steps = Math.max(Math.abs(cache0), Math.abs(cache1), Math.abs(cache2));
-        else
-            steps = Math.max(Math.abs(cache0), Math.abs(cache1));
-
-        const steps_t = steps ? 1 / steps : 1;
-
-        tmp_object1.old_x = tmp_object1.x;
-        tmp_object1.old_y = tmp_object1.y;
-        tmp_object1.old_rotation = tmp_object1.rotation;
-
-        for (let t = 0; t <= 1 && steps > 0; t += steps_t) {
-            tmp_object1.x = startX + t * cache0;
-            tmp_object1.y = startY + t * cache1;
-            if (checkRotation)
-                tmp_object1.rotation = object1.old_rotation + t * cache2;
-            tmp_object1.prepareForCollision();
-
-            for (let j = 0; j <= steps1; j++) {
-                const u = steps1 ? j / steps1 : 0;
-
-                tmp_object2.rotation = object2.old_rotation + u * cache3;
-                tmp_object2.prepareForCollision();
-
-                if (this.#collision_detection(tmp_object1, tmp_object2)) {
-                    tmp_object1.isCollided = true;
-
-                    let overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-                    if (Math.abs(overlap.x) > 0 && Math.abs(overlap.y) > 0) {
-                        tmp_object1.canResolve = true;
-                        return {
-                            x: tmp_object1.x,
-                            y: tmp_object1.y
-                        };
-                    }
-                }
-            }
-        }
-
-        tmp_object1.x = tmp_object1.old_x;
-        tmp_object1.y = tmp_object1.old_y;
-        tmp_object1.rotation = tmp_object1.old_rotation;
-        tmp_object1.prepareForCollision();
-
-        if (this.#collision_detection(tmp_object1, tmp_object2)) {
-            tmp_object1.isCollided = true;
-
-            let overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-            if (Math.abs(overlap.x) > 0 && Math.abs(overlap.y) > 0) {
-                tmp_object1.canResolve = true;
-                return {
-                    x: tmp_object1.x,
-                    y: tmp_object1.y
-                };
-            }
-        }
-        return null;
+        return {
+            aabb_info: {
+                x: minX,
+                y: minY,
+                width: object.aabb_info.width + (maxX - minX),
+                height: object.aabb_info.height + (maxY - minY),
+            },
+        };
     }
 
     /**
      * 
-     * @param {iLGE_2D_Object} object
-     * @param {iLGE_2D_Object} tmp_object1 
-     * @param {iLGE_2D_Object} tmp_object2 
-     * @param {Number} startRotation 
-     * @param {Number} endRotation 
-     * @returns 
+     * @param {iLGE_2D_Object} object 
      */
-    #checkContinuousRotationCollision(
-        object,
-        tmp_object1, tmp_object2
-    ) {
-        const cache0 = object.rotation - object.old_rotation;
-
-        let steps = Math.abs(cache0);
-
-        if (steps === 0) {
-            if (this.#collision_detection(tmp_object1, tmp_object2)) {
-                return {
-                    x: tmp_object1.x,
-                    y: tmp_object1.y
-                };
-            }
-            return null;
-        }
-
-        tmp_object1.old_rotation = tmp_object1.rotation;
-
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-
-            tmp_object1.rotation = object.old_rotation + t * cache0;
-            tmp_object1.prepareForCollision();
-
-            if (this.#collision_detection(tmp_object1, tmp_object2)) {
-                return {
-                    x: tmp_object1.x,
-                    y: tmp_object1.y
-                };
-            }
-        }
-
-        tmp_object1.rotation = tmp_object1.old_rotation;
-        tmp_object1.prepareForCollision();
-        return null;
-    }
-
     #getElementPosition(object, element) {
-        const object1Center = new iLGE_2D_Vector2(
-            object.x + (object.width - element.width) / 2,
-            object.y + (object.height - element.height) / 2
+        const objectCenter = new iLGE_2D_Vector2(
+            (object.width - element.width) / 2,
+            (object.height - element.height) / 2
         );
-        const object1Point = new iLGE_2D_Vector2(
-            object.x + element.x,
-            object.y + element.y
-        );
-        const object2Center = new iLGE_2D_Vector2(
-            object.old_x + (object.width - element.width) / 2,
-            object.old_y + (object.height - element.height) / 2
-        );
-        const object2Point = new iLGE_2D_Vector2(
-            object.old_x + element.x,
-            object.old_y + element.y
+        const objectPoint = new iLGE_2D_Vector2(
+            element.x,
+            element.y
         );
 
         const rotation_vector = new iLGE_2D_Vector2(object.radians_cos, object.radians_sin);
 
-        const rotatedObjectPoint1 = this.#rotatePoint(
-            object1Point,
+        const rotatedObjectPoint = this.#rotatePoint(
+            objectPoint,
             rotation_vector,
-            object1Center
-        );
-        const rotatedObjectPoint2 = this.#rotatePoint(
-            object2Point,
-            rotation_vector,
-            object2Center
+            objectCenter
         );
 
-        const rotatedObjectPoint = {
-            x: rotatedObjectPoint1.x,
-            y: rotatedObjectPoint1.y,
-            old_x: rotatedObjectPoint2.x,
-            old_y: rotatedObjectPoint2.y,
+        return {
+            x: object.x + rotatedObjectPoint.x,
+            y: object.y + rotatedObjectPoint.y,
+            old_x: object.old_x + rotatedObjectPoint.x,
+            old_y: object.old_y + rotatedObjectPoint.y,
         };
-        return rotatedObjectPoint;
     }
 
     /**
@@ -2553,8 +2480,8 @@ class iLGE_2D_Engine {
             return null;
         let lastDiff = Infinity;
         let ret = null;
-        let x1 = target.old_x + target.width / 2,
-            y1 = target.old_y + target.height / 2;
+        let x1 = target.x + target.width / 2,
+            y1 = target.y + target.height / 2;
         for (const object of array) {
             if (object.id === target.id || exclude_array.includes(object))
                 continue;
@@ -2574,6 +2501,41 @@ class iLGE_2D_Engine {
     /**
      * 
      * @param {iLGE_2D_Object} tmp_object1 
+     * @param {iLGE_2D_Object} tmp_object2 
+     * @param {Number} startX 
+     * @param {Number} startY 
+     * @param {Number} endX 
+     * @param {Number} endY 
+     * @returns 
+     */
+    #checkContinuousCollision(
+        tmp_object1, tmp_object2,
+        startX, startY,
+        endX, endY
+    ) {
+        const cache0 = endX - startX,
+            cache1 = endY - startY;
+
+        let steps = Math.max(Math.abs(cache0), Math.abs(cache1));
+
+        for (let i = 0; i <= steps; i++) {
+            const t = steps ? i / steps : 1;
+
+            tmp_object1.x = startX + t * cache0;
+            tmp_object1.y = startY + t * cache1;
+            tmp_object1.prepareForCollision();
+
+            if (this.#collision_detection(tmp_object1, tmp_object2)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 
+     * @param {iLGE_2D_Object} tmp_object1 
      * @param {iLGE_2D_Object_Element_Collider} element1 
      * @param {iLGE_2D_Object} object1 
      * @param {iLGE_2D_Object} object2 
@@ -2581,7 +2543,7 @@ class iLGE_2D_Engine {
     #check_object_collision(tmp_object1, element1, object1, object2, isBlocker) {
         for (let element2 of object2.element) {
             if (element2.type === iLGE_2D_Object_Element_Type_Collider) {
-                let colliderPosition = this.#getElementPosition(object2, element2);
+                let colliderPosition = object2._element_positions[element2.id];
 
                 let tmp_object2 = new iLGE_2D_Object(
                     null, null, iLGE_2D_Object_Type_Custom,
@@ -2592,135 +2554,46 @@ class iLGE_2D_Engine {
                 tmp_object2.prepareForCollision();
 
                 if (!isBlocker) {
-                    let collisionPoint1 = this.#checkContinuousRotationCollision(
-                        object2, tmp_object2, tmp_object1
-                    );
-
-                    if (!collisionPoint1 && !isBlocker) {
-                        collisionPoint1 = this.#checkContinuousRotationCollision(
-                            object1, tmp_object1, tmp_object2
-                        );
-
-                        tmp_object1.rotation = object1.rotation;
-                        tmp_object1.prepareForCollision();
-                    }
-
                     if (!this.#smartFind(element2.incorporeal_objects, object1.id) &&
-                        collisionPoint1) {
+                        this.#collision_detection(tmp_object1, tmp_object2)) {
                         this.#smartPush(element1.collided_objects, object2);
                         this.#smartPush(element2.collided_objects, object1);
-                    }
-                    else {
-                        this.#smartPop(element1.collided_objects, object2);
-                        this.#smartPop(element2.collided_objects, object1);
                     }
                 } else {
-                    const velocityX1 = object1.x - object1.old_x;
-                    const velocityY1 = object1.y - object1.old_y;
-
-                    const velocityX2 = object2.x - object2.old_x;
-                    const velocityY2 = object2.y - object2.old_y;
-
-                    let collisionPoint1 = this.#checkContinuousCollision(
-                        object1, object2,
+                    let result = this.#checkContinuousCollision(
                         tmp_object1, tmp_object2,
-                        tmp_object1.position.old_x - velocityX2, tmp_object1.position.old_y - velocityY2,
-                        tmp_object1.x + velocityX1, tmp_object1.y + velocityY1
+                        tmp_object1.old_x, tmp_object1.old_y,
+                        tmp_object1.x, tmp_object1.y
                     );
 
                     if (!this.#smartFind(element2.incorporeal_objects, object1.id) &&
-                        tmp_object1.isCollided) {
+                        result) {
                         this.#smartPush(element1.collided_objects, object2);
                         this.#smartPush(element2.collided_objects, object1);
 
-                        if (tmp_object1.canResolve && !element1.blocker && !element1.noclip && element2.blocker) {
+                        if (!element1.blocker && !element1.noclip && element2.blocker) {
                             let overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-
-                            object1.rotation = tmp_object1.rotation;
 
                             if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
                                 tmp_object1.x -= overlap.x;
+                                object1.x = tmp_object1.x + tmp_object1._rotatedObjectPoint.x;
                             } else {
                                 tmp_object1.y -= overlap.y;
+                                object1.y = tmp_object1.y + tmp_object1._rotatedObjectPoint.y;
                             }
 
-                            const objectCenter = new iLGE_2D_Vector2(
-                                tmp_object1.width / 2 - object1.width / 2,
-                                tmp_object1.height / 2 - object1.height / 2
-                            );
+                            object1.prepareForCollision();
+                            object1._element_positions[element1.id] = this.#getElementPosition(object1, element1);
 
-                            const objectPoint = new iLGE_2D_Vector2(
-                                -element1.x,
-                                -element1.y
-                            );
-
-                            const rotation_vector =
-                                new iLGE_2D_Vector2(tmp_object1.radians_cos, tmp_object1.radians_sin);
-
-                            const rotatedObjectPoint = this.#rotatePoint(
-                                objectPoint,
-                                rotation_vector,
-                                objectCenter
-                            );
-
-                            const tmp_object_position0 = this.#getElementPosition(object1, element1);
-
-                            if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
-                                if (Math.abs(overlap.x) > 0) {
-                                    object1.x = tmp_object1.x + rotatedObjectPoint.x;
-                                }
-                                else {
-                                    tmp_object1.x = tmp_object_position0.x;
-                                    tmp_object1.y = tmp_object_position0.y;
-                                    tmp_object1.prepareForCollision();
-
-                                    overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-
-                                    if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
-                                        tmp_object1.x -= overlap.x;
-                                    } else {
-                                        tmp_object1.y -= overlap.y;
-                                    }
-
-                                    object1.x = tmp_object1.x + rotatedObjectPoint.x;
-                                }
-                            } else {
-                                if (Math.abs(overlap.y) > 0) {
-                                    object1.y = tmp_object1.y + rotatedObjectPoint.y;
-                                }
-                                else {
-                                    tmp_object1.x = tmp_object_position0.x;
-                                    tmp_object1.y = tmp_object_position0.y;
-                                    tmp_object1.prepareForCollision();
-
-                                    overlap = this.#getOverlaps(tmp_object1.vertices, tmp_object2.vertices);
-
-                                    if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
-                                        tmp_object1.x -= overlap.x;
-                                    } else {
-                                        tmp_object1.y -= overlap.y;
-                                    }
-
-                                    object1.y = tmp_object1.y + rotatedObjectPoint.y;
-                                }
-                            }
-
-                            const tmp_object_position1 = this.#getElementPosition(object1, element1);
-
-                            tmp_object1.x = tmp_object_position1.x;
-                            tmp_object1.y = tmp_object_position1.y;
+                            let newPosition = object1._element_positions[element1.id];
+                            tmp_object1.x = newPosition.x;
+                            tmp_object1.y = newPosition.y;
                             tmp_object1.prepareForCollision();
 
                             if (typeof object1.onCollisionResolved_function === "function")
                                 object1.onCollisionResolved_function(this, element1);
                         }
                     }
-                    else {
-                        this.#smartPop(element1.collided_objects, object2);
-                        this.#smartPop(element2.collided_objects, object1);
-                    }
-
-                    tmp_object1.isCollided = tmp_object1.canResolve = false;
                 }
             }
         }
@@ -2738,12 +2611,34 @@ class iLGE_2D_Engine {
 
                     let tmp_object1 = new iLGE_2D_Object(
                         null, null, iLGE_2D_Object_Type_Custom,
-                        colliderPosition.x, colliderPosition.y,
-                        object1.rotation, object1.scale,
+                        colliderPosition.old_x, colliderPosition.old_y,
+                        object1.rotation + element1.rotation, object1.scale,
                         element1.width, element1.height,
                     );
-                    tmp_object1.position = colliderPosition;
+                    tmp_object1.x = colliderPosition.x;
+                    tmp_object1.y = colliderPosition.y;
                     tmp_object1.prepareForCollision();
+
+                    const objectCenter = new iLGE_2D_Vector2(
+                        (tmp_object1.width - object1.width) / 2,
+                        (tmp_object1.height - object1.height) / 2
+                    );
+
+                    const objectPoint = new iLGE_2D_Vector2(
+                        -element1.x,
+                        -element1.y
+                    );
+
+                    const rotation_vector =
+                        new iLGE_2D_Vector2(tmp_object1.radians_cos, tmp_object1.radians_sin);
+
+                    const rotatedObjectPoint = this.#rotatePoint(
+                        objectPoint,
+                        rotation_vector,
+                        objectCenter
+                    );
+
+                    tmp_object1._rotatedObjectPoint = rotatedObjectPoint;
 
                     let exclude_list = [];
                     for (let j = 4; j >= 0; j--) {
@@ -2757,7 +2652,7 @@ class iLGE_2D_Engine {
                         exclude_list.push(nearestBlocker);
                     }
 
-                    for (let j = i + 1; j < objects_with_collider_element.length; j++) {
+                    for (let j = 0; j < objects_with_collider_element.length; j++) {
                         let object2 = objects_with_collider_element[j];
                         if (object1.id === object2.id)
                             continue;
@@ -2829,10 +2724,15 @@ class iLGE_2D_Engine {
                 }
 
                 if (cache0) {
+                    object._element_positions = [];
+
                     this.#objects_loop_calculateScaleOutput(scene, object);
 
                     for (let element of object.element) {
                         if (element.type === iLGE_2D_Object_Element_Type_Collider) {
+                            element.collided_objects = [];
+                            object._element_positions[element.id] = this.#getElementPosition(object, element);
+
                             if (element.blocker)
                                 this.#smartPush(blocker_objects_with_collider_element, object);
                             else
@@ -2856,6 +2756,9 @@ class iLGE_2D_Engine {
         this.#time_new = this.#getTime();
         this.time_diff = Math.max(this.#time_new - this.#time_old, 0);
         this.#time_old = this.#time_new;
+
+        this.deltaTime = this.time_diff / (1000 / 60);
+        this.fps = Math.round(1000 / (this.time_diff ? this.time_diff : 1));
 
         if (this.#new_width !== this.width || this.#new_height !== this.height) {
             this.width = this.#new_width;
@@ -2927,14 +2830,10 @@ class iLGE_2D_Engine {
                 timeout = 1;
             let isThis = this;
             setTimeout(function () {
-                isThis.deltaTime = isThis.time_diff / (1000 / 60);
-                isThis.fps = Math.round(1000 / (isThis.time_diff ? isThis.time_diff : 1));
                 isThis.#requestAnimationFrame(isThis.start);
             }, timeout);
         }
         else {
-            this.deltaTime = this.time_diff / (1000 / 60);
-            this.fps = Math.round(1000 / (this.time_diff ? this.time_diff : 1));
             this.#requestAnimationFrame(this.start);
         }
     }

@@ -492,6 +492,8 @@ game.start_function = function (engine) {
         );
         this.collider.x = (this.width - this.collider.width) / 2;
         this.collider.y = (this.height - this.collider.height) / 2;
+        this.collider.rotation = 45;
+        
         console.log("Hello, it's me, " + this.id + "!");
         engine.pointerLock = true;
         this.max_stamina = 2048;
