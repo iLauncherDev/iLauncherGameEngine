@@ -1,3 +1,7 @@
+# 0.5.1
+    the wall collision is broken
+    small optimizations
+
 # 0.5.0
     implemented WebGL
 
