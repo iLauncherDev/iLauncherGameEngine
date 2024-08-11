@@ -321,7 +321,7 @@ game.start_function = function (engine) {
     );
     camera_hud.viewer.best_quality = true;
 
-    let transition_ended = false, transition_loop = false;
+    let transition_ended = true, transition_loop = false;
 
     let transition_effect = new iLGE_2D_Object("Transition_Effect");
     transition_effect.dither = new iLGE_2D_Object_Element_Sprite_Transition_Effect(
@@ -332,13 +332,13 @@ game.start_function = function (engine) {
     let player = new iLGE_2D_Object("player", "player", iLGE_2D_Object_Type_Custom, 128, 128, 0, 1, 32, 64);
 
     player.addElement(
-        new iLGE_2D_Object_Element_Rectangle("#0000ff", "wall", true)
+        new iLGE_2D_Object_Element_Rectangle("#0000ff", "rect", true)
     );
 
     let transition_toggle = false;
 
     camera.addElement(
-        new iLGE_2D_Object_Element_Rectangle("#ffffff", "wall", true)
+        new iLGE_2D_Object_Element_Rectangle("#ffffff", "rect", true)
     );
 
     this.control_map_load();
@@ -493,7 +493,8 @@ game.start_function = function (engine) {
         this.collider.x = (this.width - this.collider.width) / 2;
         this.collider.y = (this.height - this.collider.height) / 2;
         this.collider.rotation = 45;
-        
+        this.collider.mode = iLGE_2D_Object_Element_Collider_Mode_ContinuousDynamic;
+
         console.log("Hello, it's me, " + this.id + "!");
         engine.pointerLock = true;
         this.max_stamina = 2048;

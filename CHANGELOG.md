@@ -1,3 +1,8 @@
+# 0.5.2
+    check for potential collisions using swept volumes
+    added collider modes
+    added globalSpeed
+
 # 0.5.1
     added audio direction
     small optimizations
