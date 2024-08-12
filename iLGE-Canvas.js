@@ -31,6 +31,10 @@ class iLGE_Canvas {
     }
 
     setupShaders() {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         const vertexShaderSource = `
@@ -53,16 +57,30 @@ class iLGE_Canvas {
             uniform vec4 uColor;
             uniform sampler2D uSampler;
             uniform int uIsImage;
+            uniform int uEnableColorReplacement;
             uniform float uAlpha;
+            uniform float uBlendFactor;
+            uniform float uColorTolerance;
+            uniform vec4 uInputColor;
+            uniform vec4 uReplaceColor;
             varying vec2 vTexCoord;
 
             void main(void) {
                 vec4 color;
+                
                 if (uIsImage == 1) {
-                    color = texture2D(uSampler, vTexCoord);
+                    vec4 texColor = texture2D(uSampler, vTexCoord);
+
+                    if (uEnableColorReplacement == 1 && length(texColor.rgba - uInputColor.rgba) < uColorTolerance) {
+                        vec4 blendedColor = mix(texColor, uReplaceColor, uBlendFactor);
+                        color = blendedColor;
+                    } else {
+                        color = texColor;
+                    }
                 } else {
                     color = uColor;
                 }
+                
                 gl_FragColor = vec4(color.rgb, color.a * uAlpha);
             }
         `;
@@ -87,6 +105,12 @@ class iLGE_Canvas {
         this.samplerLocation = gl.getUniformLocation(this.program, 'uSampler');
         this.isImageLocation = gl.getUniformLocation(this.program, 'uIsImage');
         this.alphaLocation = gl.getUniformLocation(this.program, 'uAlpha');
+
+        this.enableColorReplacementLocation = gl.getUniformLocation(this.program, 'uEnableColorReplacement');
+        this.blendFactorLocation = gl.getUniformLocation(this.program, 'uBlendFactor');
+        this.colorToleranceLocation = gl.getUniformLocation(this.program, 'uColorTolerance');
+        this.inputColorLocation = gl.getUniformLocation(this.program, 'uInputColor');
+        this.replaceColorLocation = gl.getUniformLocation(this.program, 'uReplaceColor');
 
         this.positionLocation = gl.getAttribLocation(this.program, 'aVertexPosition');
         this.texCoordLocation = gl.getAttribLocation(this.program, 'aTexCoord');
@@ -127,7 +151,7 @@ class iLGE_Canvas {
             this.projectMatrixScale.x, 0, 0, 0,
             0, this.projectMatrixScale.y, 0, 0,
             0, 0, 1, 0,
-            0, 0, 0, 1
+            this.transforms.pivot.x, -this.transforms.pivot.y, 0, 1
         ];
 
         const projectionMatrix = new Float32Array(16);
@@ -144,6 +168,10 @@ class iLGE_Canvas {
     }
 
     #setTransforms() {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         const projectionMatrix = this.#createProjectionMatrix();
@@ -151,8 +179,12 @@ class iLGE_Canvas {
         const objRot = -this.transforms.rotation;
         const cosObjRot = Math.cos(objRot);
         const sinObjRot = Math.sin(objRot);
-        const tx = this.transforms.translation.x - this.halfSize.width,
-            ty = this.transforms.translation.y - this.halfSize.height;
+
+        const pW = this.canvas.width * ((this.transforms.pivot.x + 1) / 2);
+        const pH = this.canvas.height * ((this.transforms.pivot.y + 1) / 2);
+
+        const tx = this.transforms.translation.x - pW,
+            ty = this.transforms.translation.y - pH;
 
         const modelMatrix = new Float32Array([
             cosObjRot, -sinObjRot, 0, 0,
@@ -161,12 +193,22 @@ class iLGE_Canvas {
             tx, ty, 0, 1
         ]);
 
+        gl.uniform1i(this.enableColorReplacementLocation, this.transforms.image.enableColorReplacement);
+        gl.uniform1f(this.colorToleranceLocation, this.transforms.image.colorTolerance);
+        gl.uniform1f(this.blendFactorLocation, this.transforms.image.blendFactor);
+        gl.uniform4fv(this.inputColorLocation, new Float32Array(this.transforms.image.inputColor));
+        gl.uniform4fv(this.replaceColorLocation, new Float32Array(this.transforms.image.replaceColor));
+
         gl.uniform1f(this.alphaLocation, this.transforms.globalAlpha);
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, projectionMatrix);
         gl.uniformMatrix4fv(this.modelViewMatrixLocation, false, modelMatrix);
     }
 
     fillRect(colorStr, x, y, width, height) {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
         const color = this.parseColor(colorStr);
 
@@ -195,15 +237,19 @@ class iLGE_Canvas {
     }
 
     strokeRect(colorStr, x, y, width, height) {
-        const lineWidth = this.transforms.lineWidth || 1;
+        const strokeLineSize = this.transforms.strokeLineSize || 1;
 
-        this.fillRect(colorStr, x, y, width, lineWidth);
-        this.fillRect(colorStr, x, y + height - lineWidth, width, lineWidth);
-        this.fillRect(colorStr, x, y, lineWidth, height);
-        this.fillRect(colorStr, x + width - lineWidth, y, lineWidth, height);
+        this.fillRect(colorStr, x, y, width, strokeLineSize);
+        this.fillRect(colorStr, x, y + height - strokeLineSize, width, strokeLineSize);
+        this.fillRect(colorStr, x, y, strokeLineSize, height);
+        this.fillRect(colorStr, x + width - strokeLineSize, y, strokeLineSize, height);
     }
 
     #updateTexture(image) {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -219,6 +265,10 @@ class iLGE_Canvas {
     }
 
     drawImage(image, sx, sy, swidth, sheight, x, y, width, height) {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         this.image_filter = this.imageSmoothingEnabled ? gl.LINEAR : gl.NEAREST;
@@ -309,6 +359,10 @@ class iLGE_Canvas {
     }
 
     clearScreen() {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
@@ -339,10 +393,6 @@ class iLGE_Canvas {
         this.canvas.height = height;
         this.canvas_context.viewport(0, 0, this.canvas.width, this.canvas.height);
 
-        this.halfSize = {
-            width: this.canvas.width / 2,
-            height: this.canvas.height / 2
-        };
         this.projectMatrixScale = {
             x: 2 / this.canvas.width,
             y: -2 / this.canvas.height
@@ -354,6 +404,10 @@ class iLGE_Canvas {
     }
 
     setGlobalCompositeOperation(operation = "source-over") {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         gl.enable(gl.BLEND);
@@ -386,15 +440,24 @@ class iLGE_Canvas {
         }
     }
 
-    setStrokeLineWidth(lineWidth = 1.0) {
-        this.transforms.lineWidth = lineWidth;
+    setStrokeLineSize(strokeLineSize = 1.0) {
+        this.transforms.strokeLineSize = strokeLineSize;
     }
 
     rotateCamera(angle) {
         this.transforms.cameraRotation += angle;
     }
 
+    setCameraPivot(x = 0, y = 0) {
+        this.transforms.pivot.x = x;
+        this.transforms.pivot.y = y;
+    }
+
     close() {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         gl.deleteProgram(this.program);
@@ -416,14 +479,11 @@ class iLGE_Canvas {
             "experimental-webgl",
         ];
 
+        this.isCustomCanvas = true;
         this.canvas = document.createElement("canvas");
         this.canvas.width = width;
         this.canvas.height = height;
 
-        this.halfSize = {
-            width: this.canvas.width / 2,
-            height: this.canvas.height / 2
-        };
         this.projectMatrixScale = {
             x: 2 / this.canvas.width,
             y: -2 / this.canvas.height
@@ -442,12 +502,25 @@ class iLGE_Canvas {
             console.error("[iLGE-Canvas] This WebGL Context is not supported: " + context);
         }
 
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
         const gl = this.canvas_context;
 
         this.transforms = {
-            lineWidth: 1.0,
+            image: {
+                enableColorReplacement: false,
+                colorTolerance: 0.25,
+                blendFactor: 0.5,
+                inputColor: [0.0, 0.0, 0.0, 1.0],
+                replaceColor: [0.0, 0.0, 0.0, 1.0],
+            },
+
+            strokeLineSize: 1.0,
             globalAlpha: 1.0,
             translation: { x: 0, y: 0 },
+            pivot: { x: 0, y: 0 },
             cameraRotation: 0,
             rotation: 0,
         };

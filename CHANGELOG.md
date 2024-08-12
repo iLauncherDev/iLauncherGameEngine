@@ -1,3 +1,11 @@
+# 0.5.3
+    optimized zOrder and priority
+    added pivot
+    added sprites color replacement
+    added rectangle drawing mode
+    blocker collisions are resolved by distance now
+    minor fixes
+
 # 0.5.2
     check for potential collisions using swept volumes
     added collider modes

@@ -1,7 +1,9 @@
+const cursorSrc = "CursorSprite.png";
+
 let game = new iLGE_2D_Engine(
     "Test",
     [
-        "CursorSprite.png",
+        cursorSrc,
         "PDV437.png",
         "PRO_ATLAS.png",
         "DitherSprites.png",
@@ -276,6 +278,21 @@ function loadMap(scene, map) {
 }
 
 game.start_function = function (engine) {
+    const imageSource = this.findSourceObject(cursorSrc);
+
+    let background = new iLGE_2D_Object("player", "player", iLGE_2D_Object_Type_Custom, 0, 0, 0, 0, 0, 0);
+    background.addElement(new iLGE_2D_Object_Element_Rectangle("#000000", "background", true));
+    this.addObject(background);
+
+    /**
+     * 
+     * @param {iLGE_2D_Engine} engine 
+     */
+    background.update_function = function (engine) {
+        this.width = engine.width;
+        this.height = engine.height;
+    }
+
     let scene = new iLGE_2D_Scene("MyScene", "scene", true);
     this.addObject(scene);
 
@@ -330,10 +347,8 @@ game.start_function = function (engine) {
     transition_effect.addElement(transition_effect.dither);
 
     let player = new iLGE_2D_Object("player", "player", iLGE_2D_Object_Type_Custom, 128, 128, 0, 1, 32, 64);
-
-    player.addElement(
-        new iLGE_2D_Object_Element_Rectangle("#0000ff", "rect", true)
-    );
+    player.rect = new iLGE_2D_Object_Element_Rectangle("#0000ff", "rect", true);
+    player.addElement(player.rect);
 
     let transition_toggle = false;
 
@@ -454,14 +469,13 @@ game.start_function = function (engine) {
         this.game_title.element[0].styled_text = true;
         this.cursor = new iLGE_2D_Object(
             "hud2", "cursor", iLGE_2D_Object_Type_Custom,
-            0, 0, 0, 680, 48, 68
+            0, 0, 0, 680, imageSource.source.width, imageSource.source.height
         );
-        this.cursor.addElement(
-            new iLGE_2D_Object_Element_Sprite(
-                engine.findSourceObject("CursorSprite.png"),
-                "CursorSprite", true, 0, 0, 48, 68
-            )
+        let cursor_sprite = new iLGE_2D_Object_Element_Sprite(
+            imageSource,
+            "CursorSprite", true, 0, 0, imageSource.source.width, imageSource.source.height
         );
+        this.cursor.addElement(cursor_sprite);
         this.stamina_level.addElement(
             new iLGE_2D_Object_Element_Text(
                 "PDV437", "PDV437", null, 16, "#000000", true
@@ -561,23 +575,23 @@ game.start_function = function (engine) {
             engine.title + "\n" +
             eated_walls + "/" + total_walls + " Eated Walls";
         let stamina = this.stamina / this.max_stamina;
-        this.game_title.x = (engine.width - this.game_title.width * this.game_title.scale_output) / 2;
-        this.game_title.y = 4 * this.game_title.scale_output;
+        this.game_title.x = (engine.width - this.game_title.width * this.game_title.scale_output.x) / 2;
+        this.game_title.y = 4 * this.game_title.scale_output.x;
         this.stamina_hud_green.width = stamina * this.stamina_hud_red.width;
-        this.stamina_hud_red.x = 4 * this.stamina_hud_red.scale_output;
+        this.stamina_hud_red.x = 4 * this.stamina_hud_red.scale_output.x;
         this.stamina_hud_green.x = this.stamina_hud_red.x;
         this.stamina_hud_red.y =
-            (engine.height - this.stamina_hud_red.height * this.stamina_hud_red.scale_output)
-            - 4 * this.stamina_hud_red.scale_output;
+            (engine.height - this.stamina_hud_red.height * this.stamina_hud_red.scale_output.x)
+            - 4 * this.stamina_hud_red.scale_output.x;
         this.stamina_hud_green.y = this.stamina_hud_red.y;
         this.stamina_level.element[0].string = "Stamina " + Math.floor(stamina * 100) + "%";
         this.stamina_level.width = this.stamina_level.element[0].string.length * 9 + 1;
         this.stamina_level.y =
-            this.stamina_hud_red.y - this.stamina_level.height * this.stamina_level.scale_output;
+            this.stamina_hud_red.y - this.stamina_level.height * this.stamina_level.scale_output.x;
         this.stamina_level.x =
             this.stamina_hud_red.x +
-            (this.stamina_hud_red.width * this.stamina_hud_red.scale_output
-                - this.stamina_level.width * this.stamina_level.scale_output) / 2;
+            (this.stamina_hud_red.width * this.stamina_hud_red.scale_output.x
+                - this.stamina_level.width * this.stamina_level.scale_output.x) / 2;
         if (!transition_ended) {
             transition_ended = !DitherTransition(engine);
             return;
@@ -652,28 +666,11 @@ game.start_function = function (engine) {
         if (engine.control_map_get("Interact", true)) {
             collided_wall = this.collider.collidedWithByClass("wall", collided_index++);
             while (collided_wall) {
-                /**
-                 * 
-                 * @param {iLGE_2D_Engine} engine 
-                 */
-                collided_wall.start_function = function (engine) {
-                    this.delay = 150;
-                }
-                /**
-                 * 
-                 * @param {iLGE_2D_Engine} engine 
-                 */
-                collided_wall.update_function = function (engine) {
-                    if (this.delay < 1) {
-                        const source = clang_audio.createAudioBufferSource();
-                        clang_audio.playAudio(source);
-                        this.scene.removeObject(this.id);
-                        eated_walls++;
-                    }
-                };
+                const source = clang_audio.createAudioBufferSource();
+                clang_audio.playAudio(source);
+                this.scene.removeObject(collided_wall.id);
+                eated_walls++;
 
-                if (collided_wall.delay < 1)
-                    collided_wall.reset = true;
                 collided_wall = this.collider.collidedWithByClass("wall", collided_index++);
             }
         }
