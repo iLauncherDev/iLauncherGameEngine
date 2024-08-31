@@ -1,5 +1,5 @@
 # iLGE(iLauncherGameEngine)
-iLGE(iLauncherGameEngine) is a Game Engine made in javascript, [click here](https://ilauncherdev.github.io/iLauncherGameEngine/) to open the example game.
+iLGE(iLauncherGameEngine) is a Game Engine made in javascript, [click here](https://ilauncherdev.github.io/iLauncherGameEngine/main/) to open the example game.
 
 Features:
 - [x] audio object
