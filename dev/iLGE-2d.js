@@ -109,6 +109,33 @@ class iLGE_2D_Vector2 {
     }
 }
 
+class iLGE_2D_Transform {
+    constructor() {
+        this.size = new iLGE_2D_Vector2(32, 32);
+        this.pivot = new iLGE_2D_Vector2(0.5, 0.5);
+        this.oldPosition = new iLGE_2D_Vector2(0, 0);
+        this.position = new iLGE_2D_Vector2(0, 0);
+        this.scaling = new iLGE_2D_Vector2(1, 1);
+        this.scalingOutput = new iLGE_2D_Vector2(1, 1);
+        this.rotation = 0, this.oldRotation = 0;
+        this.scalingMode = iLGE_2D_Transform_ScalingMode_None;
+    }
+
+    translate(x, y) {
+        this.position.x += x;
+        this.position.y += y;
+    }
+
+    rotate(rotation) {
+        this.rotation += rotation;
+    }
+
+    scale(x, y) {
+        this.scaling.x *= x;
+        this.scaling.y *= y;
+    }
+}
+
 class iLGE_2D_Source {
     source = 0;
     source_data = [];
@@ -778,34 +805,6 @@ class iLGE_2D_Scene {
         this.id = id;
         this.classId = classId;
         this.enabled = enabled;
-    }
-}
-
-class iLGE_2D_Transform {
-    constructor() {
-        this.size = new iLGE_2D_Vector2(32, 32);
-        this.pivot = new iLGE_2D_Vector2(0.5, 0.5);
-        this.initialPosition = new iLGE_2D_Vector2(0, 0);
-        this.oldPosition = new iLGE_2D_Vector2(0, 0);
-        this.position = new iLGE_2D_Vector2(0, 0);
-        this.scaling = new iLGE_2D_Vector2(1, 1);
-        this.scalingOutput = new iLGE_2D_Vector2(1, 1);
-        this.rotation = 0, this.oldRotation = 0;
-        this.scalingMode = iLGE_2D_Transform_ScalingMode_None;
-    }
-
-    translate(x, y) {
-        this.position.x += x;
-        this.position.y += y;
-    }
-
-    rotate(rotation) {
-        this.rotation += rotation;
-    }
-
-    scale(x, y) {
-        this.scaling.x *= x;
-        this.scaling.y *= y;
     }
 }
 
