@@ -28,7 +28,7 @@
     new text alignment
 
 # 0.4.3
-    added onCollisionResolved_function variable in iLGE_2D_GameObject class
+    added onCollisionResolved_function variable in iLGE_2D_Object class
     improved collision
     fixed debug mode
 
@@ -46,7 +46,7 @@
     changed the Audio to AudioContext
 
 # 0.3.18
-    added incorporeal objects support in iLGE_2D_GameObject_Component_Collider class
+    added incorporeal objects support in iLGE_2D_Object_Element_Collider class
     fixed blocker collision resolution in iLGE_2D_Engine class
     redraw onepixel_canvas_context in iLGE_2D_Engine class
     removed {willReadFrequently: true} in all canvas contexts
@@ -62,8 +62,8 @@
     added scale support for transition effect
 
 # 0.3.14
-    added getStringSize function in iLGE_2D_GameObject_Font class
-    added "enabled" boolean in iLGE_2D_GameObject class
+    added getStringSize function in iLGE_2D_Object_Font class
+    added "enabled" boolean in iLGE_2D_Object class
 
 # 0.3.13
     fixed keyboard_handler in iLGE_2D_Engine class
@@ -143,17 +143,17 @@
     fonts that do not have a fixed width are now supported
 
 # 0.2.3
-    added priority variable in iLGE_2D_GameObject class
+    added priority variable in iLGE_2D_Object class
 
 # 0.2.2
     fixed a small bug in #check_collisions function inside iLGE_2D_Engine class
 
 # 0.2.1
-    rename #getRotationDirection to #getRotationVector in class iLGE_2D_GameObject
+    rename #getRotationDirection to #getRotationVector in class iLGE_2D_Object
 
 # 0.2.0
     added class iLGE_2D_Scene
-    added scene variable in class iLGE_2D_GameObject for camera
+    added scene variable in class iLGE_2D_Object for camera
     removed #objects variable in class iLGE_2D_Engine
 
 # 0.1.16
@@ -169,7 +169,7 @@
     added id in missing classes
 
 # 0.1.14
-    improve zOrder in class iLGE_2D_GameObject
+    improve z_order in class iLGE_2D_Object
 
 # 0.1.13
     code style adjustiment
@@ -181,15 +181,15 @@
 
 # 0.1.11
     added count*ObjectByClass functions in class iLGE_2D_Engine
-    remove useless "if (object.findComponentByType())"
-    remove useless #smartClean in class iLGE_2D_GameObject
+    remove useless "if (object.findElementByType())"
+    remove useless #smartClean in class iLGE_2D_Object
     improve #smartClean in class iLGE_2D_Engine
 
 # 0.1.10
     added toggle in mouse and keyboard events
 
 # 0.1.9
-    implemented zOrder in class iLGE_2D_GameObject
+    implemented z_order in class iLGE_2D_Object
     changed mouse events and pointerLock behavior
     added event.preventDefault() in mouse contextMenu event
     fixed control_map_get() in class iLGE_2D_Engine
