@@ -1,0 +1,33 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Build the site
+      run: |
+        mkdir dist
+        cp -r ./ dist || echo
+        rm -r dist/dist || echo
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist
+        destination_dir: ${{ github.ref_name }}
+
+    - name: Show the GitHub Pages URL
+      run: |
+        echo "GitHub Pages URL: https://${{ github.repository_owner }}.github.io/${{ github.repository }}/${{ github.ref_name }}/"
