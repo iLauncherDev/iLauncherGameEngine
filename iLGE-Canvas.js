@@ -126,6 +126,11 @@ class iLGE_Canvas {
         }
     }
 
+    scale(sx, sy) {
+        this.transforms.scaling.x *= sx;
+        this.transforms.scaling.y *= sy;
+    }
+
     translate(tx, ty) {
         this.transforms.translation.x += tx;
         this.transforms.translation.y += ty;
@@ -133,6 +138,21 @@ class iLGE_Canvas {
 
     rotate(angle) {
         this.transforms.rotation += angle;
+    }
+
+    #multiplyMatrices(a, b) {
+        const array = new Float32Array(16);
+
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                array[i * 4 + j] = 0;
+                for (let k = 0; k < 4; k++) {
+                    array[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                }
+            }
+        }
+
+        return array;
     }
 
     #createProjectionMatrix() {
@@ -154,17 +174,7 @@ class iLGE_Canvas {
             this.transforms.pivot.x, -this.transforms.pivot.y, 0, 1
         ];
 
-        const projectionMatrix = new Float32Array(16);
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                projectionMatrix[i * 4 + j] = 0;
-                for (let k = 0; k < 4; k++) {
-                    projectionMatrix[i * 4 + j] += rotationMatrix[i * 4 + k] * orthoMatrix[k * 4 + j];
-                }
-            }
-        }
-
-        return projectionMatrix;
+        return this.#multiplyMatrices(rotationMatrix, orthoMatrix);
     }
 
     #setTransforms() {
@@ -180,11 +190,18 @@ class iLGE_Canvas {
         const cosObjRot = Math.cos(objRot);
         const sinObjRot = Math.sin(objRot);
 
-        const pW = this.canvas.width * ((this.transforms.pivot.x + 1) / 2);
-        const pH = this.canvas.height * ((this.transforms.pivot.y + 1) / 2);
+        const pW = (this.canvas.width * ((this.transforms.pivot.x + 1) / 2));
+        const pH = (this.canvas.height * ((this.transforms.pivot.y + 1) / 2));
 
-        const tx = this.transforms.translation.x - pW,
-            ty = this.transforms.translation.y - pH;
+        const tx = this.transforms.translation.x * this.transforms.scaling.x - pW,
+            ty = this.transforms.translation.y * this.transforms.scaling.y - pH;
+
+        const scaleMatrix = [
+            this.transforms.scaling.x, 0, 0, 0,
+            0, this.transforms.scaling.y, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
 
         const modelMatrix = new Float32Array([
             cosObjRot, -sinObjRot, 0, 0,
@@ -201,7 +218,7 @@ class iLGE_Canvas {
 
         gl.uniform1f(this.alphaLocation, this.transforms.globalAlpha);
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, projectionMatrix);
-        gl.uniformMatrix4fv(this.modelViewMatrixLocation, false, modelMatrix);
+        gl.uniformMatrix4fv(this.modelViewMatrixLocation, false, this.#multiplyMatrices(scaleMatrix, modelMatrix));
     }
 
     fillRect(colorStr, x, y, width, height) {
@@ -519,6 +536,7 @@ class iLGE_Canvas {
 
             strokeLineSize: 1.0,
             globalAlpha: 1.0,
+            scaling: { x: 1, y: 1 },
             translation: { x: 0, y: 0 },
             pivot: { x: 0, y: 0 },
             cameraRotation: 0,

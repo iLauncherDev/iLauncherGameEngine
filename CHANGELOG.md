@@ -1,3 +1,6 @@
+# 0.6.0
+    the GameObject update
+
 # 0.5.3
     optimized zOrder and priority
     added pivot
