@@ -2195,8 +2195,8 @@ class iLGE_2D_Engine {
 
         camera.transform.scalingOutput = scale;
         camera.minScale = Math.min(camera.transform.scalingOutput.x, camera.transform.scalingOutput.y);
-        camera.transform.size.x = Math.round(width / scale.x);
-        camera.transform.size.y = Math.round(height / scale.y);
+        camera.transform.size.x = width / scale.x;
+        camera.transform.size.y = height / scale.y;
 
         if (viewer.best_quality) {
             if (viewer.canvas.width !== width || viewer.canvas.height !== height)
