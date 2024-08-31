@@ -1,0 +1,9 @@
+node_modules
+dist
+engine
+package*.json
+test*
+NPC_AI
+build
+output*
+.vscode
