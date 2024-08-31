@@ -2041,51 +2041,11 @@ class iLGE_2D_Engine {
                         context.rotate(object.radians);
 
                         for (const component of object.component) {
-                            if (!component.visible &&
-                                (component.type !== iLGE_2D_GameObject_Component_Type_Collider || !this.debug))
+                            if (!component.visible)
                                 continue;
                             context.setGlobalAlpha(component.opacity);
 
                             switch (component.type) {
-                                case iLGE_2D_GameObject_Component_Type_Collider:
-                                    let componentSize = [
-                                        component.transform.size.x,
-                                        component.transform.size.y
-                                    ];
-
-                                    let componentPivot = [
-                                        componentSize[0] * component.transform.pivot.x,
-                                        componentSize[1] * component.transform.pivot.y
-                                    ];
-
-                                    let colliderPosition = new iLGE_2D_Vector2(
-                                        object.transform.position.x + object._componentPositions[component.id].x + componentPivot[0],
-                                        object.transform.position.y + object._componentPositions[component.id].y + componentPivot[1]
-                                    );
-
-                                    context.save();
-                                    context.rotate((Math.PI / 180) * component.transform.rotation);
-
-                                    context.translate(
-                                        -offset.x,
-                                        -offset.y
-                                    );
-
-                                    context.translate(
-                                        colliderPosition.x,
-                                        colliderPosition.y
-                                    );
-
-                                    context.setGlobalAlpha(0.15);
-                                    this.#fillRect(
-                                        context, "#000000",
-                                        -componentPivot[0],
-                                        -componentPivot[1],
-                                        componentSize[0],
-                                        componentSize[1]
-                                    );
-                                    context.restore();
-                                    break;
                                 case iLGE_2D_GameObject_Component_Type_Rectangle:
                                     context.setStrokeLineSize(component.strokeLineSize);
 
@@ -2159,6 +2119,55 @@ class iLGE_2D_Engine {
                                     break;
                             }
                         }
+
+                        if (this.debug) {
+                            for (const component of object.component) {
+                                if (component.type === iLGE_2D_GameObject_Component_Type_Collider) {
+                                    let componentSize = [
+                                        component.transform.size.x,
+                                        component.transform.size.y
+                                    ];
+
+                                    let componentPivot = [
+                                        componentSize[0] * component.transform.pivot.x,
+                                        componentSize[1] * component.transform.pivot.y
+                                    ];
+
+                                    let colliderPosition = new iLGE_2D_Vector2(
+                                        object.transform.position.x + object._componentPositions[component.id].x + componentPivot[0],
+                                        object.transform.position.y + object._componentPositions[component.id].y + componentPivot[1]
+                                    );
+
+                                    context.restore();
+                                    context.save();
+                                    context.rotate((Math.PI / 180) * component.transform.rotation + object.radians);
+
+                                    context.translate(
+                                        colliderPosition.x,
+                                        colliderPosition.y
+                                    );
+
+                                    context.setGlobalAlpha(0.15);
+                                    this.#fillRect(
+                                        context, "#000000",
+                                        -componentPivot[0],
+                                        -componentPivot[1],
+                                        componentSize[0],
+                                        componentSize[1]
+                                    );
+                                    context.restore();
+
+                                    context.save();
+                                    context.translate(
+                                        offset.x,
+                                        offset.y
+                                    );
+                                    context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                                    context.rotate(object.radians);
+                                }
+                            }
+                        }
+
                         context.restore();
                     }
                     break;
@@ -2419,50 +2428,11 @@ class iLGE_2D_Engine {
                     context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
                     context.rotate(object.radians);
                     for (const component of object.component) {
-                        if (!component.visible &&
-                            (component.type !== iLGE_2D_GameObject_Component_Type_Collider || !this.debug))
+                        if (!component.visible)
                             continue;
                         context.setGlobalAlpha(component.opacity);
 
                         switch (component.type) {
-                            case iLGE_2D_GameObject_Component_Type_Collider:
-                                let componentSize = [
-                                    component.transform.size.x,
-                                    component.transform.size.y
-                                ];
-
-                                let componentPivot = [
-                                    componentSize[0] * component.transform.pivot.x,
-                                    componentSize[1] * component.transform.pivot.y
-                                ];
-
-                                let colliderPosition = new iLGE_2D_Vector2(
-                                    object.transform.position.x + object._componentPositions[component.id].x + componentPivot[0],
-                                    object.transform.position.y + object._componentPositions[component.id].y + componentPivot[1]
-                                );
-
-                                context.save();
-                                context.rotate((Math.PI / 180) * component.transform.rotation);
-                                context.translate(
-                                    -offset.x,
-                                    -offset.y
-                                );
-
-                                context.translate(
-                                    colliderPosition.x,
-                                    colliderPosition.y
-                                );
-
-                                context.setGlobalAlpha(0.15);
-                                this.#fillRect(
-                                    context, "#000000",
-                                    -componentPivot[0],
-                                    -componentPivot[1],
-                                    componentSize[0],
-                                    componentSize[1]
-                                );
-                                context.restore();
-                                break;
                             case iLGE_2D_GameObject_Component_Type_Rectangle:
                                 context.setStrokeLineSize(component.strokeLineSize);
 
@@ -2545,6 +2515,55 @@ class iLGE_2D_Engine {
                                 break;
                         }
                     }
+
+                    if (this.debug) {
+                        for (const component of object.component) {
+                            if (component.type === iLGE_2D_GameObject_Component_Type_Collider) {
+                                let componentSize = [
+                                    component.transform.size.x,
+                                    component.transform.size.y
+                                ];
+
+                                let componentPivot = [
+                                    componentSize[0] * component.transform.pivot.x,
+                                    componentSize[1] * component.transform.pivot.y
+                                ];
+
+                                let colliderPosition = new iLGE_2D_Vector2(
+                                    object.transform.position.x + object._componentPositions[component.id].x + componentPivot[0],
+                                    object.transform.position.y + object._componentPositions[component.id].y + componentPivot[1]
+                                );
+
+                                context.restore();
+                                context.save();
+                                context.rotate((Math.PI / 180) * component.transform.rotation + object.radians);
+
+                                context.translate(
+                                    colliderPosition.x,
+                                    colliderPosition.y
+                                );
+
+                                context.setGlobalAlpha(0.15);
+                                this.#fillRect(
+                                    context, "#000000",
+                                    -componentPivot[0],
+                                    -componentPivot[1],
+                                    componentSize[0],
+                                    componentSize[1]
+                                );
+                                context.restore();
+
+                                context.save();
+                                context.translate(
+                                    offset.x,
+                                    offset.y
+                                );
+                                context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                                context.rotate(object.radians);
+                            }
+                        }
+                    }
+
                     context.restore();
                     break;
             }
