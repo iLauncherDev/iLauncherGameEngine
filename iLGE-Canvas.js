@@ -41,13 +41,14 @@ class iLGE_Canvas {
             attribute vec4 aVertexPosition;
             attribute vec2 aTexCoord;
 
-            uniform mat4 uModelViewMatrix;
             uniform mat4 uProjectionMatrix;
+            uniform mat4 uViewMatrix;
+            uniform mat4 uModelViewMatrix;
 
             varying vec2 vTexCoord;
 
             void main(void) {
-                gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+                gl_Position = uProjectionMatrix * uViewMatrix * uModelViewMatrix * aVertexPosition;
                 vTexCoord = aTexCoord;
             }
         `;
@@ -99,6 +100,7 @@ class iLGE_Canvas {
         }
 
         this.modelViewMatrixLocation = gl.getUniformLocation(this.program, 'uModelViewMatrix');
+        this.viewMatrixLocation = gl.getUniformLocation(this.program, 'uViewMatrix');
         this.projectionMatrixLocation = gl.getUniformLocation(this.program, 'uProjectionMatrix');
 
         this.colorLocation = gl.getUniformLocation(this.program, 'uColor');
@@ -127,21 +129,56 @@ class iLGE_Canvas {
     }
 
     scale(sx, sy) {
-        this.transforms.scaling.x *= sx;
-        this.transforms.scaling.y *= sy;
+        let matrix = [
+            sx, 0, 0, 0,
+            0, sy, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
+
+        if (this.transforms.isTranslatedCamera) {
+            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
+        } else {
+            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
+        }
     }
 
     translate(tx, ty) {
-        this.transforms.translation.x += tx;
-        this.transforms.translation.y += ty;
+        let matrix = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            tx, ty, 0, 1,
+        ];
+        if (this.transforms.isTranslatedCamera) {
+            this.transforms.isRotatedCamera = true;
+            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
+        } else {
+            this.transforms.isTranslatedCamera = true;
+            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
+        }
     }
 
     rotate(angle) {
-        this.transforms.rotation += angle;
+        angle = -angle;
+
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        let matrix = [
+            cos, -sin, 0, 0,
+            sin, cos, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
+        if (this.transforms.isRotatedCamera) {
+            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
+        } else {
+            this.transforms.isRotatedCamera = true;
+            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
+        }
     }
 
     #multiplyMatrices(a, b) {
-        const array = new Float32Array(16);
+        const array = [];
 
         for (let i = 0; i < 4; i++) {
             for (let j = 0; j < 4; j++) {
@@ -155,60 +192,12 @@ class iLGE_Canvas {
         return array;
     }
 
-    #createProjectionMatrix() {
-        const camRot = -this.transforms.cameraRotation;
-        const cosCamRot = Math.cos(camRot);
-        const sinCamRot = Math.sin(camRot);
-
-        const rotationMatrix = [
-            cosCamRot, -sinCamRot, 0, 0,
-            sinCamRot, cosCamRot, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
-        ];
-
-        const orthoMatrix = [
-            this.projectMatrixScale.x, 0, 0, 0,
-            0, this.projectMatrixScale.y, 0, 0,
-            0, 0, 1, 0,
-            this.transforms.pivot.x, -this.transforms.pivot.y, 0, 1
-        ];
-
-        return this.#multiplyMatrices(rotationMatrix, orthoMatrix);
-    }
-
     #setTransforms() {
         /**
          * 
          * @param {WebGLRenderingContext} gl
          */
         const gl = this.canvas_context;
-
-        const projectionMatrix = this.#createProjectionMatrix();
-
-        const objRot = -this.transforms.rotation;
-        const cosObjRot = Math.cos(objRot);
-        const sinObjRot = Math.sin(objRot);
-
-        const pW = (this.canvas.width * ((this.transforms.pivot.x + 1) / 2));
-        const pH = (this.canvas.height * ((this.transforms.pivot.y + 1) / 2));
-
-        const tx = this.transforms.translation.x * this.transforms.scaling.x - pW,
-            ty = this.transforms.translation.y * this.transforms.scaling.y - pH;
-
-        const scaleMatrix = [
-            this.transforms.scaling.x, 0, 0, 0,
-            0, this.transforms.scaling.y, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1,
-        ];
-
-        const modelMatrix = new Float32Array([
-            cosObjRot, -sinObjRot, 0, 0,
-            sinObjRot, cosObjRot, 0, 0,
-            0, 0, 1, 0,
-            tx, ty, 0, 1
-        ]);
 
         gl.uniform1i(this.enableColorReplacementLocation, this.transforms.image.enableColorReplacement);
         gl.uniform1f(this.colorToleranceLocation, this.transforms.image.colorTolerance);
@@ -217,8 +206,21 @@ class iLGE_Canvas {
         gl.uniform4fv(this.replaceColorLocation, new Float32Array(this.transforms.image.replaceColor));
 
         gl.uniform1f(this.alphaLocation, this.transforms.globalAlpha);
-        gl.uniformMatrix4fv(this.projectionMatrixLocation, false, projectionMatrix);
-        gl.uniformMatrix4fv(this.modelViewMatrixLocation, false, this.#multiplyMatrices(scaleMatrix, modelMatrix));
+        gl.uniformMatrix4fv(
+            this.projectionMatrixLocation,
+            false,
+            this.projectionMatrix
+        );
+        gl.uniformMatrix4fv(
+            this.viewMatrixLocation,
+            false,
+            new Float32Array(this.transforms.cameraMatrix)
+        );
+        gl.uniformMatrix4fv(
+            this.modelViewMatrixLocation,
+            false,
+            new Float32Array(this.transforms.matrix)
+        );
     }
 
     fillRect(colorStr, x, y, width, height) {
@@ -406,14 +408,22 @@ class iLGE_Canvas {
     }
 
     setScreenResolution(width, height) {
+        /**
+         * 
+         * @param {WebGLRenderingContext} gl
+         */
+        const gl = this.canvas_context;
+
         this.canvas.width = width;
         this.canvas.height = height;
-        this.canvas_context.viewport(0, 0, this.canvas.width, this.canvas.height);
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
-        this.projectMatrixScale = {
-            x: 2 / this.canvas.width,
-            y: -2 / this.canvas.height
-        };
+        this.projectionMatrix = new Float32Array([
+            2 / this.canvas.width, 0, 0, 0,
+            0, -2 / this.canvas.height, 0, 0,
+            0, 0, 1, 0,
+            -1, 1, 0, 1
+        ]);
     }
 
     setGlobalAlpha(alpha = 1.0) {
@@ -461,15 +471,6 @@ class iLGE_Canvas {
         this.transforms.strokeLineSize = strokeLineSize;
     }
 
-    rotateCamera(angle) {
-        this.transforms.cameraRotation += angle;
-    }
-
-    setCameraPivot(x = 0, y = 0) {
-        this.transforms.pivot.x = x;
-        this.transforms.pivot.y = y;
-    }
-
     close() {
         /**
          * 
@@ -498,13 +499,6 @@ class iLGE_Canvas {
 
         this.isCustomCanvas = true;
         this.canvas = document.createElement("canvas");
-        this.canvas.width = width;
-        this.canvas.height = height;
-
-        this.projectMatrixScale = {
-            x: 2 / this.canvas.width,
-            y: -2 / this.canvas.height
-        };
 
         for (let context of webgl_contexts) {
             this.canvas_context = this.canvas.getContext(
@@ -518,6 +512,8 @@ class iLGE_Canvas {
                 break;
             console.error("[iLGE-Canvas] This WebGL Context is not supported: " + context);
         }
+
+        this.setScreenResolution(width, height);
 
         /**
          * 
@@ -536,11 +532,22 @@ class iLGE_Canvas {
 
             strokeLineSize: 1.0,
             globalAlpha: 1.0,
+            cameraMatrix: [
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1,
+            ],
+            matrix: [
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1,
+            ],
             scaling: { x: 1, y: 1 },
             translation: { x: 0, y: 0 },
-            pivot: { x: 0, y: 0 },
-            cameraRotation: 0,
-            rotation: 0,
+            isTranslatedCamera: false,
+            isRotatedCamera: false,
         };
 
         this.transformsStack = [];

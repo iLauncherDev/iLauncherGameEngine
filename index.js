@@ -243,6 +243,7 @@ function onLoad() {
                 switch (value) {
                     case 1:
                         let wall = new iLGE_2D_GameObject("Wall_" + (y * array.length + x), "wall");
+                        wall.zOrder = 1;
                         wall.transform.position = new iLGE_2D_Vector2(
                             x * map.size + offset.x,
                             y * map.size + offset.y
@@ -386,7 +387,6 @@ function onLoad() {
         let zonePosition = classic_map.getZonePosition(9);
 
         let player = new iLGE_2D_GameObject("player", "player");
-        player.zOrder = -1;
         player.transform.position = zonePosition;
         player.transform.size = new iLGE_2D_Vector2(32, 64);
         player.collider = new iLGE_2D_GameObject_Component_Collider(
