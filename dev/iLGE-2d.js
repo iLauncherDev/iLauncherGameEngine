@@ -5,8 +5,6 @@
 // You can obtain a copy of the license at https://www.gnu.org/licenses/gpl-3.0.en.html.
 
 const iLGE_2D_Version = "0.6.0";
-const iLGE_2D_Transform_ScalingMode_Default = "default";
-const iLGE_2D_Transform_ScalingMode_None = "none";
 const iLGE_2D_GameObject_Component_Type_Script = "Script";
 const iLGE_2D_GameObject_Component_Type_Sprite = "Sprite";
 const iLGE_2D_GameObject_Component_Type_Rectangle = "Rectangle";
@@ -118,7 +116,6 @@ class iLGE_2D_Transform {
         this.scaling = new iLGE_2D_Vector2(1, 1);
         this.scalingOutput = new iLGE_2D_Vector2(1, 1);
         this.rotation = 0, this.oldRotation = 0;
-        this.scalingMode = iLGE_2D_Transform_ScalingMode_None;
     }
 
     translate(x, y) {
@@ -2140,12 +2137,13 @@ class iLGE_2D_Engine {
 
                                     context.restore();
                                     context.save();
-                                    context.rotate((Math.PI / 180) * component.transform.rotation + object.radians);
 
                                     context.translate(
                                         colliderPosition.x,
                                         colliderPosition.y
                                     );
+
+                                    context.rotate((Math.PI / 180) * component.transform.rotation + object.radians);
 
                                     context.setGlobalAlpha(0.15);
                                     this.#fillRect(
@@ -2230,8 +2228,8 @@ class iLGE_2D_Engine {
             vcamera.transform.position.y += (camera.transform.size.y / 2) / 2;
         }
         vcamera.prepareForCollision();
-        let camera_width = camera.transform.size.x;
-        let camera_height = camera.transform.size.y;
+        let cameraWidth = camera.transform.size.x, cameraPivotX = cameraWidth * camera.transform.pivot.x;
+        let cameraHeight = camera.transform.size.y, cameraPivotY = cameraHeight * camera.transform.pivot.y;
         viewer.canvas_context.save();
         viewer.canvas_context.scale(camera.transform.scalingOutput.x, camera.transform.scalingOutput.y);
         for (let component of camera.component) {
@@ -2242,7 +2240,7 @@ class iLGE_2D_Engine {
                     viewer.canvas_context.fillRect(
                         component.color,
                         0, 0,
-                        camera_width, camera_height
+                        cameraWidth, cameraHeight
                     );
                     break;
                 case iLGE_2D_GameObject_Component_Type_Sprite:
@@ -2251,17 +2249,15 @@ class iLGE_2D_Engine {
                         component.srcTransform.position.x, component.srcTransform.position.y,
                         component.srcTransform.size.x, component.srcTransform.size.y,
                         0, 0,
-                        camera_width, camera_height
+                        cameraWidth, cameraHeight
                     );
                     break;
             }
         }
-        viewer.canvas_context.setCameraPivot(
-            ((viewer.canvas.width * camera.transform.pivot.x) / viewer.canvas.width) * 2 - 1,
-            ((viewer.canvas.height * camera.transform.pivot.y) / viewer.canvas.height) * 2 - 1
-        );
-        viewer.canvas_context.translate(-camera.transform.position.x, -camera.transform.position.y);
-        viewer.canvas_context.rotateCamera(-vcamera.radians);
+
+        viewer.canvas_context.translate(cameraPivotX, cameraPivotY);
+        viewer.canvas_context.rotate(-vcamera.radians);
+        viewer.canvas_context.translate(-camera.transform.position.x - cameraPivotX, -camera.transform.position.y - cameraPivotY);
 
         let zOrderInfo = this.#getZOrderInfo(camera.scene.objects);
         for (const objects of zOrderInfo) {
@@ -2271,11 +2267,12 @@ class iLGE_2D_Engine {
         }
 
         if (this.debug) {
-            viewer.canvas_context.translate(camera.transform.position.x, camera.transform.position.y);
-            viewer.canvas_context.rotateCamera(vcamera.radians);
+            viewer.canvas_context.restore();
+            viewer.canvas_context.save();
+            viewer.canvas_context.scale(camera.transform.scalingOutput.x, camera.transform.scalingOutput.y);
 
             let positions = [
-                0, 0,
+                vcamera.transform.position.x - camera.transform.position.x, vcamera.transform.position.y - camera.transform.position.y,
                 vcamera.transform.size.x, vcamera.transform.size.y
             ];
             viewer.canvas_context.setStrokeLineSize(camera.minScale * 2);
@@ -2536,12 +2533,13 @@ class iLGE_2D_Engine {
 
                                 context.restore();
                                 context.save();
-                                context.rotate((Math.PI / 180) * component.transform.rotation + object.radians);
 
                                 context.translate(
                                     colliderPosition.x,
                                     colliderPosition.y
                                 );
+
+                                context.rotate((Math.PI / 180) * component.transform.rotation + object.radians);
 
                                 context.setGlobalAlpha(0.15);
                                 this.#fillRect(
@@ -2992,7 +2990,7 @@ class iLGE_2D_Engine {
 
                         if (!this.#isPaused) {
                             for (const component1 of object1.component) {
-                                if (component1 && component1.type === iLGE_2D_GameObject_Component_Type_Script) {
+                                if (component1.type === iLGE_2D_GameObject_Component_Type_Script) {
                                     if (typeof component1.onCollisionResolved === "function")
                                         component1.onCollisionResolved(this, component1);
                                 }
@@ -3069,38 +3067,6 @@ class iLGE_2D_Engine {
         }
     }
 
-    /**
-     * 
-     * @param {iLGE_2D_Scene} scene 
-     * @param {iLGE_2D_GameObject} object 
-     */
-    #objectsLoopCalculateScaleOutput(scene, object) {
-        switch (object.transform.scalingMode) {
-            case iLGE_2D_Transform_ScalingMode_Default:
-                if (scene === this) {
-                    let scale_output = new iLGE_2D_Vector2(0, 0);
-                    if (object.transform.scaling.x !== 0) {
-                        scale_output.x = Math.min(
-                            this.canvas.width / object.transform.scaling.x,
-                            this.canvas.height / object.transform.scaling.x
-                        );
-                    }
-                    if (object.transform.scaling.y !== 0) {
-                        scale_output.y = Math.min(
-                            this.canvas.width / object.transform.scaling.y,
-                            this.canvas.height / object.transform.scaling.y
-                        );
-                    }
-
-                    object.transform.scalingOutput = scale_output;
-                    break;
-                }
-            default:
-                object.transform.scalingOutput = object.transform.scaling;
-                break;
-        }
-    }
-
     #objectsUpdate(
         priority, scene = this
     ) {
@@ -3118,11 +3084,11 @@ class iLGE_2D_Engine {
                     object.transform.oldRotation = object.transform.rotation;
 
                     if (isCustom)
-                        this.#objectsLoopCalculateScaleOutput(scene, object);
+                        object.transform.scalingOutput = object.transform.scaling.cloneIt();
 
                     if (!this.#isPaused && object.enabled) {
                         for (const component of object.component) {
-                            if (component && component.type === iLGE_2D_GameObject_Component_Type_Script) {
+                            if (component.type === iLGE_2D_GameObject_Component_Type_Script) {
                                 component.object = object;
 
                                 if (typeof component.Start === "function" && component.Started) {
@@ -3138,7 +3104,7 @@ class iLGE_2D_Engine {
 
                     object.prepareForCollision();
 
-                    this.#objectsLoopCalculateScaleOutput(scene, object);
+                    object.transform.scalingOutput = object.transform.scaling.cloneIt();
                 }
             }
         }
