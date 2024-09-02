@@ -118,6 +118,31 @@ class iLGE_Canvas {
         this.texCoordLocation = gl.getAttribLocation(this.program, 'aTexCoord');
     }
 
+    #multiplyMatrices(a, b) {
+        const array = [];
+
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                array[i * 4 + j] = 0;
+                for (let k = 0; k < 4; k++) {
+                    array[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                }
+            }
+        }
+
+        return array;
+    }
+
+    applyTransformMatrix(matrix, isCamera) {
+        if (!matrix || matrix.length < 4 * 4)
+            return;
+
+        if (isCamera)
+            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
+        else
+            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
+    }
+
     save() {
         this.transformsStack.push(this.#clone(this.transforms));
     }
@@ -136,11 +161,7 @@ class iLGE_Canvas {
             0, 0, 0, 1,
         ];
 
-        if (this.transforms.isTranslatedCamera) {
-            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
-        } else {
-            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
-        }
+        this.applyTransformMatrix(matrix, !this.transforms.isTranslatedCamera);
     }
 
     translate(tx, ty) {
@@ -150,13 +171,13 @@ class iLGE_Canvas {
             0, 0, 1, 0,
             tx, ty, 0, 1,
         ];
-        if (this.transforms.isTranslatedCamera) {
+
+        this.applyTransformMatrix(matrix, !this.transforms.isTranslatedCamera);
+
+        if (this.transforms.isTranslatedCamera)
             this.transforms.isRotatedCamera = true;
-            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
-        } else {
+        else
             this.transforms.isTranslatedCamera = true;
-            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
-        }
     }
 
     rotate(angle) {
@@ -169,27 +190,10 @@ class iLGE_Canvas {
             0, 0, 1, 0,
             0, 0, 0, 1,
         ];
-        if (this.transforms.isRotatedCamera) {
-            this.transforms.matrix = this.#multiplyMatrices(matrix, this.transforms.matrix);
-        } else {
-            this.transforms.isRotatedCamera = true;
-            this.transforms.cameraMatrix = this.#multiplyMatrices(matrix, this.transforms.cameraMatrix);
-        }
-    }
 
-    #multiplyMatrices(a, b) {
-        const array = [];
+        this.applyTransformMatrix(matrix, !this.transforms.isRotatedCamera);
 
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                array[i * 4 + j] = 0;
-                for (let k = 0; k < 4; k++) {
-                    array[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
-                }
-            }
-        }
-
-        return array;
+        this.transforms.isRotatedCamera = true;
     }
 
     #setTransforms() {
