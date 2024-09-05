@@ -161,7 +161,7 @@ class iLGE_Canvas {
             0, 0, 0, 1,
         ];
 
-        this.applyTransformMatrix(matrix, !this.transforms.isTranslatedCamera);
+        this.applyTransformMatrix(matrix, false);
     }
 
     translate(tx, ty) {
@@ -172,12 +172,7 @@ class iLGE_Canvas {
             tx, ty, 0, 1,
         ];
 
-        this.applyTransformMatrix(matrix, !this.transforms.isTranslatedCamera);
-
-        if (this.transforms.isTranslatedCamera)
-            this.transforms.isRotatedCamera = true;
-        else
-            this.transforms.isTranslatedCamera = true;
+        this.applyTransformMatrix(matrix, false);
     }
 
     rotate(angle) {
@@ -191,9 +186,7 @@ class iLGE_Canvas {
             0, 0, 0, 1,
         ];
 
-        this.applyTransformMatrix(matrix, !this.transforms.isRotatedCamera);
-
-        this.transforms.isRotatedCamera = true;
+        this.applyTransformMatrix(matrix, false);
     }
 
     #setTransforms() {
@@ -549,9 +542,7 @@ class iLGE_Canvas {
                 0, 0, 0, 1,
             ],
             scaling: { x: 1, y: 1 },
-            translation: { x: 0, y: 0 },
-            isTranslatedCamera: false,
-            isRotatedCamera: false,
+            translation: { x: 0, y: 0 }
         };
 
         this.transformsStack = [];
