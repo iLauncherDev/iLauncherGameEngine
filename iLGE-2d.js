@@ -108,14 +108,15 @@ class iLGE_2D_Vector2 {
 }
 
 class iLGE_2D_Transform {
-    constructor() {
-        this.size = new iLGE_2D_Vector2(32, 32);
+    constructor(isNormalized = false) {
+        this.size = new iLGE_2D_Vector2(1, 1);
         this.pivot = new iLGE_2D_Vector2(0.5, 0.5);
         this.oldPosition = new iLGE_2D_Vector2(0, 0);
         this.position = new iLGE_2D_Vector2(0, 0);
         this.scaling = new iLGE_2D_Vector2(1, 1);
-        this.scalingOutput = new iLGE_2D_Vector2(1, 1);
         this.rotation = 0, this.oldRotation = 0;
+
+        this.isNormalized = isNormalized;
     }
 
     translate(x, y) {
@@ -815,6 +816,7 @@ class iLGE_2D_GameObject {
     enabled = true;
 
     transform = new iLGE_2D_Transform();
+    outputTransform = new iLGE_2D_Transform();
 
     component = [];
     _componentPositions = [];
@@ -2018,15 +2020,15 @@ class iLGE_2D_Engine {
                     if (!object.component.length)
                         continue;
                     if (this.#collision_detection(vcamera, object)) {
-                        let object_width = object.transform.size.x;
-                        let object_height = object.transform.size.y;
+                        let object_width = object.outputTransform.size.x;
+                        let object_height = object.outputTransform.size.y;
                         let object_pivot = [
-                            object_width * object.transform.pivot.x,
-                            object_height * object.transform.pivot.y
+                            object.outputTransform.pivot.x,
+                            object.outputTransform.pivot.y
                         ];
                         let offset = new iLGE_2D_Vector2(
-                            object.transform.position.x + object_pivot[0],
-                            object.transform.position.y + object_pivot[1]
+                            object.outputTransform.position.x + object_pivot[0],
+                            object.outputTransform.position.y + object_pivot[1]
                         );
 
                         context.save();
@@ -2034,7 +2036,7 @@ class iLGE_2D_Engine {
                             offset.x,
                             offset.y
                         );
-                        context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                        context.scale(object.outputTransform.scaling.x, object.outputTransform.scaling.y);
                         context.rotate(object.radians);
 
                         for (const component of object.component) {
@@ -2160,7 +2162,7 @@ class iLGE_2D_Engine {
                                         offset.x,
                                         offset.y
                                     );
-                                    context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                                    context.scale(object.outputTransform.scaling.x, object.outputTransform.scaling.y);
                                     context.rotate(object.radians);
                                 }
                             }
@@ -2199,8 +2201,8 @@ class iLGE_2D_Engine {
                 height / camera.transform.scaling.y
             );
 
-        camera.transform.scalingOutput = scale;
-        camera.minScale = Math.min(camera.transform.scalingOutput.x, camera.transform.scalingOutput.y);
+        camera.outputTransform.scaling = scale;
+        camera.minScale = Math.min(camera.outputTransform.scaling.x, camera.outputTransform.scaling.y);
         camera.transform.size.x = width / scale.x;
         camera.transform.size.y = height / scale.y;
 
@@ -2231,7 +2233,7 @@ class iLGE_2D_Engine {
         let cameraWidth = camera.transform.size.x, cameraPivotX = cameraWidth * camera.transform.pivot.x;
         let cameraHeight = camera.transform.size.y, cameraPivotY = cameraHeight * camera.transform.pivot.y;
         viewer.canvas_context.save();
-        viewer.canvas_context.scale(camera.transform.scalingOutput.x, camera.transform.scalingOutput.y);
+        viewer.canvas_context.scale(camera.outputTransform.scaling.x, camera.outputTransform.scaling.y);
         for (let component of camera.component) {
             if (!component.visible)
                 continue;
@@ -2269,7 +2271,7 @@ class iLGE_2D_Engine {
         if (this.debug) {
             viewer.canvas_context.restore();
             viewer.canvas_context.save();
-            viewer.canvas_context.scale(camera.transform.scalingOutput.x, camera.transform.scalingOutput.y);
+            viewer.canvas_context.scale(camera.outputTransform.scaling.x, camera.outputTransform.scaling.y);
 
             let positions = [
                 vcamera.transform.position.x - camera.transform.position.x, vcamera.transform.position.y - camera.transform.position.y,
@@ -2406,15 +2408,15 @@ class iLGE_2D_Engine {
         for (let object of objects) {
             switch (object.type) {
                 case iLGE_2D_GameObject_Type_GameObject:
-                    let object_width = object.transform.size.x,
-                        object_height = object.transform.size.y;
+                    let object_width = object.outputTransform.size.x,
+                        object_height = object.outputTransform.size.y;
                     let object_pivot = [
-                        object_width * object.transform.pivot.x,
-                        object_height * object.transform.pivot.y
+                        object.outputTransform.pivot.x,
+                        object.outputTransform.pivot.y
                     ];
                     let offset = new iLGE_2D_Vector2(
-                        object.transform.position.x + object_pivot[0],
-                        object.transform.position.y + object_pivot[1]
+                        object.outputTransform.position.x + object_pivot[0],
+                        object.outputTransform.position.y + object_pivot[1]
                     );
 
                     context.save();
@@ -2422,8 +2424,9 @@ class iLGE_2D_Engine {
                         offset.x,
                         offset.y
                     );
-                    context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                    context.scale(object.outputTransform.scaling.x, object.outputTransform.scaling.y);
                     context.rotate(object.radians);
+
                     for (const component of object.component) {
                         if (!component.visible)
                             continue;
@@ -2556,7 +2559,7 @@ class iLGE_2D_Engine {
                                     offset.x,
                                     offset.y
                                 );
-                                context.scale(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                                context.scale(object.outputTransform.scaling.x, object.outputTransform.scaling.y);
                                 context.rotate(object.radians);
                             }
                         }
@@ -2582,7 +2585,7 @@ class iLGE_2D_Engine {
         for (let object of this.#objects) {
             if (object.type === iLGE_2D_GameObject_Type_GameObject && object.component.length) {
                 this.canvas_context.save();
-                let object_scale = Math.min(object.transform.scalingOutput.x, object.transform.scalingOutput.y);
+                let object_scale = Math.min(object.outputTransform.scaling.x, object.outputTransform.scaling.y);
 
                 for (let component of object.component) {
                     if (!component.visible)
@@ -2998,6 +3001,8 @@ class iLGE_2D_Engine {
                         }
 
                         object1.prepareForCollision();
+
+                        this.#calculateOutputTransform(object1, object1.scene);
                     }
                 }
 
@@ -3067,6 +3072,33 @@ class iLGE_2D_Engine {
         }
     }
 
+    /**
+     * 
+     * @param {iLGE_2D_GameObject} object 
+     * @param {iLGE_2D_Scene} scene 
+     * @returns 
+     */
+    #calculateOutputTransform(object, scene) {
+        let sceneSize = new iLGE_2D_Vector2(scene.width, scene.height);
+        const transform = object.transform, outputTransform = object.outputTransform;
+
+        if (scene === this && transform.isNormalized) {
+            outputTransform.position =
+                transform.position.cloneIt().multiply(sceneSize);
+            outputTransform.size =
+                transform.size.cloneIt().multiply(sceneSize);
+        }
+        else {
+            outputTransform.position =
+                transform.position.cloneIt();
+            outputTransform.size =
+                transform.size.cloneIt();
+        }
+
+        outputTransform.scaling = transform.scaling.cloneIt();
+        outputTransform.pivot = transform.pivot.cloneIt().multiply(outputTransform.size);
+    }
+
     #objectsUpdate(
         priority, scene = this
     ) {
@@ -3084,7 +3116,7 @@ class iLGE_2D_Engine {
                     object.transform.oldRotation = object.transform.rotation;
 
                     if (isCustom)
-                        object.transform.scalingOutput = object.transform.scaling.cloneIt();
+                        this.#calculateOutputTransform(object, scene);
 
                     if (!this.#isPaused && object.enabled) {
                         for (const component of object.component) {
@@ -3104,7 +3136,7 @@ class iLGE_2D_Engine {
 
                     object.prepareForCollision();
 
-                    object.transform.scalingOutput = object.transform.scaling.cloneIt();
+                    this.#calculateOutputTransform(object, scene);
                 }
             }
         }

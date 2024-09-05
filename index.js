@@ -413,15 +413,7 @@ function onLoad() {
             cameraTransform: camera.transform,
             playerTransform: player.transform,
 
-            /**
-             * 
-             * @param {iLGE_2D_Engine} engine 
-             */
-            Update: function (engine) {
-                const transform = this.object.transform;
-
-                transform.size.x = engine.width;
-                transform.size.y = engine.height;
+            Update: function () {
                 this.cameraTransform.position.x =
                     this.playerTransform.position.x - (this.cameraTransform.size.x - this.playerTransform.size.x) / 2;
                 this.cameraTransform.position.y =
@@ -433,12 +425,20 @@ function onLoad() {
         let cameraViewer = new iLGE_2D_GameObject("cameraViewer", "viewer");
         let viewer = new iLGE_2D_GameObject_Component_Camera_Viewer(camera, "viewer", true);
         viewer.best_quality = true;
+        cameraViewer.transform.isNormalized = true;
         cameraViewer.viewer = viewer;
         cameraViewer.addComponent(viewer);
         cameraViewer.addComponent(viewerScript);
 
         this.addObject(cameraViewer);
         this.addObject(scene);
+
+        let background = new iLGE_2D_GameObject("background", "background");
+        background.transform.isNormalized = true;
+        background.addComponent(new iLGE_2D_GameObject_Component_Rectangle("#000000", "rectangle", true));
+        background.zOrder = -1;
+
+        this.addObject(background);
     };
 
     game.update_function = function () {
