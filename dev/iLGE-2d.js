@@ -21,6 +21,7 @@ const iLGE_2D_GameObject_Type_Font = "Font";
 const iLGE_2D_GameObject_Type_Camera = "Camera";
 const iLGE_2D_GameObject_Type_GameObject = "GameObject";
 const iLGE_2D_GameObject_Type_Scene = "Scene";
+const iLGE_2D_GameObject_Type_Engine = "Engine";
 const iLGE_2D_Source_Type_Image = "Image_Source";
 const iLGE_2D_Source_Type_Audio = "Audio_Source";
 const iLGE_2D_Source_Type_RAW = "RAW_Source";
@@ -117,6 +118,19 @@ class iLGE_2D_Transform {
         this.rotation = 0, this.oldRotation = 0;
 
         this.isNormalized = isNormalized;
+    }
+
+    cloneIt() {
+        const clone = new iLGE_2D_Transform(this.isNormalized);
+
+        clone.size = this.size.cloneIt();
+        clone.pivot = this.pivot.cloneIt();
+        clone.oldPosition = this.oldPosition.cloneIt();
+        clone.position = this.position.cloneIt();
+        clone.scaling = this.scaling.cloneIt();
+        clone.rotation = this.rotation, clone.oldRotation = this.oldRotation;
+
+        return clone;
     }
 
     translate(x, y) {
@@ -925,19 +939,6 @@ class iLGE_2D_GameObject {
         this.#smartPop(this.component, this.#smartFind(this.component, id));
     }
 
-    getHalfSize(scaled = false) {
-        if (scaled)
-            return [
-                this.scaled_width / 2,
-                this.scaled_height / 2,
-            ];
-        else
-            return [
-                this.width / 2,
-                this.height / 2,
-            ];
-    }
-
     getRotationVector(object = this) {
         if (object === this)
             object = object.transform;
@@ -989,9 +990,7 @@ class iLGE_2D_GameObject {
             ),
         ];
 
-        let pivot = new iLGE_2D_Vector2(
-            this.transform.size.x * this.transform.pivot.x, this.transform.size.y * this.transform.pivot.y
-        );
+        let pivot = this.transform.pivot.cloneIt().multiply(this.transform.size);
 
         let offset = [], old_offset = [];
 
@@ -1005,8 +1004,8 @@ class iLGE_2D_GameObject {
         this.oldOriginalVertices = [];
         this.oldVertices = [];
 
-        let objPos = new iLGE_2D_Vector2(this.transform.position.x, this.transform.position.y),
-            objOldPos = new iLGE_2D_Vector2(this.transform.oldPosition.x, this.transform.oldPosition.y);
+        let objPos = this.transform.position,
+            objOldPos = this.transform.oldPosition;
 
         for (let i = 0; i < offset.length; i++) {
             this.originalVertices[i] = vertices[i].cloneIt().sum(objPos);
@@ -1024,10 +1023,12 @@ class iLGE_2D_GameObject {
         this.id = id;
         this.classId = classId;
         this.type = type;
+        this.scene = scene;
     }
 }
 
 class iLGE_2D_Engine {
+    type = iLGE_2D_GameObject_Type_Engine;
     auto_resize = false;
     reset = true;
     width = 0;
@@ -1036,9 +1037,6 @@ class iLGE_2D_Engine {
     #new_height = 0;
     start_function = 0;
     update_function = 0;
-
-    #string_cache = [];
-    #string_cache_styles = [];
 
     #control_map_key = "Control_Map";
 
@@ -2122,7 +2120,10 @@ class iLGE_2D_Engine {
                         if (this.debug) {
                             for (const component of object.component) {
                                 if (component.type === iLGE_2D_GameObject_Component_Type_Collider) {
-                                    let componentSize = [
+                                    let componentSize = component.transform.isNormalized ? [
+                                        component.transform.size.x * object.transform.size.x,
+                                        component.transform.size.y * object.transform.size.y
+                                    ] : [
                                         component.transform.size.x,
                                         component.transform.size.y
                                     ];
@@ -2133,8 +2134,8 @@ class iLGE_2D_Engine {
                                     ];
 
                                     let colliderPosition = new iLGE_2D_Vector2(
-                                        object.transform.position.x + object._componentPositions[component.id].x + componentPivot[0],
-                                        object.transform.position.y + object._componentPositions[component.id].y + componentPivot[1]
+                                        object.outputTransform.position.x + object._componentPositions[component.id].x + componentPivot[0],
+                                        object.outputTransform.position.y + object._componentPositions[component.id].y + componentPivot[1]
                                     );
 
                                     context.restore();
@@ -2217,7 +2218,7 @@ class iLGE_2D_Engine {
         }
 
         let vcamera = new iLGE_2D_GameObject(
-            null, null, iLGE_2D_GameObject_Type_Camera
+            null, null, iLGE_2D_GameObject_Type_Camera, camera.scene
         );
         vcamera.transform.rotation = camera.transform.rotation;
         vcamera.transform.size = camera.transform.size.cloneIt();
@@ -2519,7 +2520,10 @@ class iLGE_2D_Engine {
                     if (this.debug) {
                         for (const component of object.component) {
                             if (component.type === iLGE_2D_GameObject_Component_Type_Collider) {
-                                let componentSize = [
+                                let componentSize = component.transform.isNormalized ? [
+                                    component.transform.size.x * object.transform.size.x,
+                                    component.transform.size.y * object.transform.size.y
+                                ] : [
                                     component.transform.size.x,
                                     component.transform.size.y
                                 ];
@@ -2530,8 +2534,8 @@ class iLGE_2D_Engine {
                                 ];
 
                                 let colliderPosition = new iLGE_2D_Vector2(
-                                    object.transform.position.x + object._componentPositions[component.id].x + componentPivot[0],
-                                    object.transform.position.y + object._componentPositions[component.id].y + componentPivot[1]
+                                    object.outputTransform.position.x + object._componentPositions[component.id].x + componentPivot[0],
+                                    object.outputTransform.position.y + object._componentPositions[component.id].y + componentPivot[1]
                                 );
 
                                 context.restore();
@@ -2641,20 +2645,39 @@ class iLGE_2D_Engine {
      * @param {Boolean} reverted
      */
     #getComponentPosition(object, component, reverted = false) {
-        const objectCenter = reverted ? new iLGE_2D_Vector2(
-            component.transform.size.x * 0.5 - object.transform.size.x * object.transform.pivot.x,
-            component.transform.size.y * 0.5 - object.transform.size.y * object.transform.pivot.y
-        ) : new iLGE_2D_Vector2(
-            object.transform.size.x * object.transform.pivot.x - component.transform.size.x * 0.5,
-            object.transform.size.y * object.transform.pivot.y - component.transform.size.y * 0.5
-        );
-        const objectPoint = reverted ? new iLGE_2D_Vector2(
-            -component.transform.position.x,
-            -component.transform.position.y
-        ) : new iLGE_2D_Vector2(
-            component.transform.position.x,
-            component.transform.position.y
-        );
+        let objectCenter, objectPoint;
+        if (component.transform.isNormalized) {
+            objectCenter = reverted ? new iLGE_2D_Vector2(
+                component.transform.size.x * object.transform.size.x * 0.5 - object.transform.size.x * object.transform.pivot.x,
+                component.transform.size.y * object.transform.size.y * 0.5 - object.transform.size.y * object.transform.pivot.y
+            ) : new iLGE_2D_Vector2(
+                object.transform.size.x * object.transform.pivot.x - component.transform.size.x * object.transform.size.x * 0.5,
+                object.transform.size.y * object.transform.pivot.y - component.transform.size.y * object.transform.size.y * 0.5
+            );
+            objectPoint = reverted ? new iLGE_2D_Vector2(
+                -component.transform.position.x * object.transform.size.x,
+                -component.transform.position.y * object.transform.size.y
+            ) : new iLGE_2D_Vector2(
+                component.transform.position.x * object.transform.size.x,
+                component.transform.position.y * object.transform.size.y
+            );
+        }
+        else {
+            objectCenter = reverted ? new iLGE_2D_Vector2(
+                component.transform.size.x * 0.5 - object.transform.size.x * object.transform.pivot.x,
+                component.transform.size.y * 0.5 - object.transform.size.y * object.transform.pivot.y
+            ) : new iLGE_2D_Vector2(
+                object.transform.size.x * object.transform.pivot.x - component.transform.size.x * 0.5,
+                object.transform.size.y * object.transform.pivot.y - component.transform.size.y * 0.5
+            );
+            objectPoint = reverted ? new iLGE_2D_Vector2(
+                -component.transform.position.x,
+                -component.transform.position.y
+            ) : new iLGE_2D_Vector2(
+                component.transform.position.x,
+                component.transform.position.y
+            );
+        }
 
         const rotation_vector = new iLGE_2D_Vector2(object.radiansCos, object.radiansSin);
 
@@ -2956,7 +2979,10 @@ class iLGE_2D_Engine {
                 tmp_object2.mode = component2.mode;
                 tmp_object2.substeps = component2.substeps;
                 tmp_object2._rotatedObjectPoint = object2._componentPositionsReverted[component2.id];
-                tmp_object2.transform.size = component2.transform.size;
+                if (component2.transform.isNormalized)
+                    tmp_object2.transform.size = component2.transform.size.cloneIt().multiply(object2.transform.size);
+                else
+                    tmp_object2.transform.size = component2.transform.size;
                 tmp_object2.transform.rotation = object2.transform.rotation + component2.transform.rotation;
                 tmp_object2.transform.oldRotation = object2.transform.oldRotation + component2.transform.rotation;
                 tmp_object2.transform.pivot = component2.transform.pivot;
@@ -3000,9 +3026,9 @@ class iLGE_2D_Engine {
                             }
                         }
 
-                        object1.prepareForCollision();
-
                         this.#calculateOutputTransform(object1, object1.scene);
+
+                        object1.prepareForCollision();
                     }
                 }
 
@@ -3030,7 +3056,10 @@ class iLGE_2D_Engine {
                     tmp_object1.mode = component1.mode;
                     tmp_object1.substeps = component1.substeps;
                     tmp_object1._rotatedObjectPoint = object1._componentPositionsReverted[component1.id];
-                    tmp_object1.transform.size = component1.transform.size;
+                    if (component1.transform.isNormalized)
+                        tmp_object1.transform.size = component1.transform.size.cloneIt().multiply(object1.transform.size);
+                    else
+                        tmp_object1.transform.size = component1.transform.size;
                     tmp_object1.transform.rotation = object1.transform.rotation + component1.transform.rotation;
                     tmp_object1.transform.oldRotation = object1.transform.oldRotation + component1.transform.rotation;
                     tmp_object1.transform.pivot = component1.transform.pivot;
@@ -3079,24 +3108,24 @@ class iLGE_2D_Engine {
      * @returns 
      */
     #calculateOutputTransform(object, scene) {
+        if (!scene)
+            return;
+
         let sceneSize = new iLGE_2D_Vector2(scene.width, scene.height);
-        const transform = object.transform, outputTransform = object.outputTransform;
+        const transform = object.transform, outputTransform = transform.cloneIt();
 
-        if (scene === this && transform.isNormalized) {
-            outputTransform.position =
-                transform.position.cloneIt().multiply(sceneSize);
-            outputTransform.size =
-                transform.size.cloneIt().multiply(sceneSize);
-        }
-        else {
-            outputTransform.position =
-                transform.position.cloneIt();
-            outputTransform.size =
-                transform.size.cloneIt();
+        if (transform.isNormalized &&
+            typeof scene.width === "number" && scene.width > 0 &&
+            typeof scene.height === "number" && scene.height > 0
+        ) {
+            outputTransform.position.multiply(sceneSize);
+            outputTransform.oldPosition.multiply(sceneSize);
+            outputTransform.size.multiply(sceneSize);
         }
 
-        outputTransform.scaling = transform.scaling.cloneIt();
-        outputTransform.pivot = transform.pivot.cloneIt().multiply(outputTransform.size);
+        outputTransform.pivot.multiply(outputTransform.size);
+
+        object.outputTransform = outputTransform;
     }
 
     #objectsUpdate(
@@ -3134,9 +3163,9 @@ class iLGE_2D_Engine {
                         }
                     }
 
-                    object.prepareForCollision();
-
                     this.#calculateOutputTransform(object, scene);
+
+                    object.prepareForCollision();
                 }
             }
         }
