@@ -346,12 +346,15 @@ function onLoad() {
             speed: 0,
             max_speed: 16,
             mouseSensitivity: 1000 / 180,
+            angle: 0,
 
             /**
              * 
              * @param {iLGE_2D_Engine} engine 
              */
             Update: function (engine) {
+                const transform = this.object.transform;
+
                 let cursorMovementX = engine.control_map_get("CursorMovementX", false);
                 let Left = engine.control_map_get("MovementX", true) | (
                     engine.control_map_get("Right", true) - engine.control_map_get("Left", true)
@@ -365,18 +368,20 @@ function onLoad() {
                 else
                     this.speed = this.min_speed;
 
+                this.angle += cursorMovementX / this.mouseSensitivity;
+
+                if (engine.control_map_get("Interact", true))
+                    transform.rotation = this.angle - 180;
+                else
+                    transform.rotation = this.angle;
+
                 const movement = new iLGE_2D_Vector2(Left, Up);
-                movement.transform(this.object.getRotationVector());
+                movement.transform(this.object.getRotationVector({ rotation: this.angle }));
                 movement.normalize();
 
-                movement.multiply(new iLGE_2D_Vector2(
-                    this.speed * engine.deltaTime,
-                    this.speed * engine.deltaTime
-                ));
+                movement.multiply(this.speed * engine.deltaTime);
 
-                const transform = this.object.transform;
                 transform.translate(movement.x, movement.y);
-                transform.rotate(cursorMovementX / this.mouseSensitivity);
             },
         };
 
@@ -392,8 +397,11 @@ function onLoad() {
         player.collider = new iLGE_2D_GameObject_Component_Collider(
             false, false, "collider", 0, 0, 16, 16
         );
-        player.collider.transform.position.x = (player.transform.size.x - player.collider.transform.size.x) / 2;
-        player.collider.transform.position.y = (player.transform.size.y - player.collider.transform.size.y) / 2;
+        player.collider.transform.isNormalized = true;
+        player.collider.transform.size.divide(player.transform.size);
+        player.collider.transform.position.sum(player.collider.transform.isNormalized ? 1 : player.transform.size);
+        player.collider.transform.position.subtract(player.collider.transform.size);
+        player.collider.transform.position.divide(2);
         player.collider.mode = iLGE_2D_GameObject_Component_Collider_Mode_ContinuousDynamic;
         player.addComponent(new iLGE_2D_GameObject_Component_Rectangle("#0000ff", "rect", true));
         player.addComponent(player.collider);
