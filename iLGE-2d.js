@@ -78,11 +78,7 @@ class iLGE_2D_Vector2 {
     }
 
     normalize() {
-        let magnitude = this.magnitude();
-        if (!magnitude)
-            return this;
-        this.x /= magnitude;
-        this.y /= magnitude;
+        this.divide(this.magnitude());
         return this;
     }
 
@@ -2646,38 +2642,32 @@ class iLGE_2D_Engine {
      */
     #getComponentPosition(object, component, reverted = false) {
         let objectCenter, objectPoint;
+
         if (component.transform.isNormalized) {
-            objectCenter = reverted ? new iLGE_2D_Vector2(
-                component.transform.size.x * object.transform.size.x * 0.5 - object.transform.size.x * object.transform.pivot.x,
-                component.transform.size.y * object.transform.size.y * 0.5 - object.transform.size.y * object.transform.pivot.y
-            ) : new iLGE_2D_Vector2(
+            objectCenter = new iLGE_2D_Vector2(
                 object.transform.size.x * object.transform.pivot.x - component.transform.size.x * object.transform.size.x * 0.5,
                 object.transform.size.y * object.transform.pivot.y - component.transform.size.y * object.transform.size.y * 0.5
             );
-            objectPoint = reverted ? new iLGE_2D_Vector2(
-                -component.transform.position.x * object.transform.size.x,
-                -component.transform.position.y * object.transform.size.y
-            ) : new iLGE_2D_Vector2(
+
+            objectPoint = new iLGE_2D_Vector2(
                 component.transform.position.x * object.transform.size.x,
                 component.transform.position.y * object.transform.size.y
             );
         }
         else {
-            objectCenter = reverted ? new iLGE_2D_Vector2(
-                component.transform.size.x * 0.5 - object.transform.size.x * object.transform.pivot.x,
-                component.transform.size.y * 0.5 - object.transform.size.y * object.transform.pivot.y
-            ) : new iLGE_2D_Vector2(
+            objectCenter = new iLGE_2D_Vector2(
                 object.transform.size.x * object.transform.pivot.x - component.transform.size.x * 0.5,
                 object.transform.size.y * object.transform.pivot.y - component.transform.size.y * 0.5
             );
-            objectPoint = reverted ? new iLGE_2D_Vector2(
-                -component.transform.position.x,
-                -component.transform.position.y
-            ) : new iLGE_2D_Vector2(
+
+            objectPoint = new iLGE_2D_Vector2(
                 component.transform.position.x,
                 component.transform.position.y
             );
         }
+
+        if (reverted)
+            objectCenter.multiply(-1), objectPoint.multiply(-1);
 
         const rotation_vector = new iLGE_2D_Vector2(object.radiansCos, object.radiansSin);
 
