@@ -374,11 +374,9 @@ class iLGE_2D_GameObject_Font {
 }
 
 class iLGE_2D_GameObject_Component_Sprite {
-    enableColorReplacement = false;
-    colorTolerance = 0.25;
-    blendFactor = 0.5;
-    inputColor = "#000000";
-    replaceColor = "#000000";
+    useGrayscaleMultiplier = false;
+    multiplyFactor = 1;
+    targetColor = "#ffffff";
 
     image = 0;
     type = iLGE_2D_GameObject_Component_Type_Sprite;
@@ -2006,7 +2004,6 @@ class iLGE_2D_Engine {
      */
     #draw_camera_scene(viewer, camera, vcamera, objects) {
         const context = viewer.canvas_context;
-        const transforms = context.transforms;
 
         for (let object of objects) {
             switch (object.type) {
@@ -2064,15 +2061,7 @@ class iLGE_2D_Engine {
                                     }
                                     break;
                                 case iLGE_2D_GameObject_Component_Type_Sprite:
-                                    if (context.isCustomCanvas) {
-                                        transforms.image.enableColorReplacement = component.enableColorReplacement;
-                                        transforms.image.colorTolerance = component.colorTolerance;
-                                        transforms.image.blendFactor = component.blendFactor;
-                                        transforms.image.inputColor =
-                                            context.parseColor(component.inputColor);
-                                        transforms.image.replaceColor =
-                                            context.parseColor(component.replaceColor);
-                                    }
+                                    this.#setSpriteFlags(context, component);
 
                                     this.#drawImage(
                                         context, component.image,
@@ -2398,9 +2387,24 @@ class iLGE_2D_Engine {
         return effect_frame;
     }
 
-    #draw_hud(objects) {
+    /**
+     * 
+     * @param {iLGE_Canvas} canvas_context 
+     */
+    #setSpriteFlags(canvas_context, component) {
         const context = this.canvas_context;
         const transforms = context.transforms;
+
+        if (context.isCustomCanvas) {
+            transforms.image.useGrayscaleMultiplier = component.useGrayscaleMultiplier;
+            transforms.image.multiplyFactor = component.multiplyFactor;
+            transforms.image.targetColor =
+                context.parseColor(component.targetColor);
+        }
+    }
+
+    #draw_hud(objects) {
+        const context = this.canvas_context;
 
         for (let object of objects) {
             switch (object.type) {
@@ -2455,15 +2459,7 @@ class iLGE_2D_Engine {
                                 }
                                 break;
                             case iLGE_2D_GameObject_Component_Type_Sprite:
-                                if (context.isCustomCanvas) {
-                                    transforms.image.enableColorReplacement = component.enableColorReplacement;
-                                    transforms.image.colorTolerance = component.colorTolerance;
-                                    transforms.image.blendFactor = component.blendFactor;
-                                    transforms.image.inputColor =
-                                        context.parseColor(component.inputColor);
-                                    transforms.image.replaceColor =
-                                        context.parseColor(component.replaceColor);
-                                }
+                                this.#setSpriteFlags(context, component);
 
                                 this.#drawImage(
                                     context, component.image,

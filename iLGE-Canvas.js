@@ -58,12 +58,10 @@ class iLGE_Canvas {
             uniform vec4 uColor;
             uniform sampler2D uSampler;
             uniform int uIsImage;
-            uniform int uEnableColorReplacement;
+            uniform int uUseGrayscaleMultiplier;
             uniform float uAlpha;
-            uniform float uBlendFactor;
-            uniform float uColorTolerance;
-            uniform vec4 uInputColor;
-            uniform vec4 uReplaceColor;
+            uniform float uMultiplyFactor;
+            uniform vec4 uTargetColor;
             varying vec2 vTexCoord;
 
             void main(void) {
@@ -72,11 +70,15 @@ class iLGE_Canvas {
                 if (uIsImage == 1) {
                     vec4 texColor = texture2D(uSampler, vTexCoord);
 
-                    if (uEnableColorReplacement == 1 && length(texColor.rgba - uInputColor.rgba) < uColorTolerance) {
-                        vec4 blendedColor = mix(texColor, uReplaceColor, uBlendFactor);
-                        color = blendedColor;
-                    } else {
-                        color = texColor;
+                    float multiplyFactor = uMultiplyFactor;
+                    float invertedMultiplyFactor = 1.0 - multiplyFactor;
+
+                    color = texColor;
+
+                    if (uUseGrayscaleMultiplier == 1){
+                        if (texColor.r == texColor.g && texColor.g == texColor.b) {
+                            color = (texColor.rgba * invertedMultiplyFactor) + (texColor.rgba * multiplyFactor) * uTargetColor.rgba;
+                        }
                     }
                 } else {
                     color = uColor;
@@ -108,11 +110,9 @@ class iLGE_Canvas {
         this.isImageLocation = gl.getUniformLocation(this.program, 'uIsImage');
         this.alphaLocation = gl.getUniformLocation(this.program, 'uAlpha');
 
-        this.enableColorReplacementLocation = gl.getUniformLocation(this.program, 'uEnableColorReplacement');
-        this.blendFactorLocation = gl.getUniformLocation(this.program, 'uBlendFactor');
-        this.colorToleranceLocation = gl.getUniformLocation(this.program, 'uColorTolerance');
-        this.inputColorLocation = gl.getUniformLocation(this.program, 'uInputColor');
-        this.replaceColorLocation = gl.getUniformLocation(this.program, 'uReplaceColor');
+        this.useGrayscaleMultiplierLocation = gl.getUniformLocation(this.program, 'uUseGrayscaleMultiplier');
+        this.multiplyFactorLocation = gl.getUniformLocation(this.program, "uMultiplyFactor");
+        this.targetColorLocation = gl.getUniformLocation(this.program, 'uTargetColor');
 
         this.positionLocation = gl.getAttribLocation(this.program, 'aVertexPosition');
         this.texCoordLocation = gl.getAttribLocation(this.program, 'aTexCoord');
@@ -196,11 +196,9 @@ class iLGE_Canvas {
          */
         const gl = this.canvas_context;
 
-        gl.uniform1i(this.enableColorReplacementLocation, this.transforms.image.enableColorReplacement);
-        gl.uniform1f(this.colorToleranceLocation, this.transforms.image.colorTolerance);
-        gl.uniform1f(this.blendFactorLocation, this.transforms.image.blendFactor);
-        gl.uniform4fv(this.inputColorLocation, new Float32Array(this.transforms.image.inputColor));
-        gl.uniform4fv(this.replaceColorLocation, new Float32Array(this.transforms.image.replaceColor));
+        gl.uniform1i(this.useGrayscaleMultiplierLocation, this.transforms.image.useGrayscaleMultiplier);
+        gl.uniform1f(this.multiplyFactorLocation, this.transforms.image.multiplyFactor);
+        gl.uniform4fv(this.targetColorLocation, new Float32Array(this.transforms.image.targetColor));
 
         gl.uniform1f(this.alphaLocation, this.transforms.globalAlpha);
         gl.uniformMatrix4fv(
@@ -520,11 +518,9 @@ class iLGE_Canvas {
 
         this.transforms = {
             image: {
-                enableColorReplacement: false,
-                colorTolerance: 0.25,
-                blendFactor: 0.5,
-                inputColor: [0.0, 0.0, 0.0, 1.0],
-                replaceColor: [0.0, 0.0, 0.0, 1.0],
+                multiplyFactor: 1,
+                useGrayscaleMultiplier: false,
+                targetColor: "#ffffff",
             },
 
             strokeLineSize: 1.0,
