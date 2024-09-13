@@ -2010,7 +2010,7 @@ class iLGE_2D_Engine {
                 case iLGE_2D_GameObject_Type_GameObject:
                     if (!object.component.length)
                         continue;
-                    if (this.#collision_detection(vcamera, object)) {
+                    if (this.#aabb_collision_detection(vcamera, object)) {
                         let object_width = object.outputTransform.size.x;
                         let object_height = object.outputTransform.size.y;
                         let object_pivot = [
@@ -2403,12 +2403,15 @@ class iLGE_2D_Engine {
         }
     }
 
-    #draw_hud(objects) {
+    #draw_hud(objects, vcamera) {
         const context = this.canvas_context;
 
         for (let object of objects) {
             switch (object.type) {
                 case iLGE_2D_GameObject_Type_GameObject:
+                    if (!this.#aabb_collision_detection(vcamera, object))
+                        return;
+
                     let object_width = object.outputTransform.size.x,
                         object_height = object.outputTransform.size.y;
                     let object_pivot = [
@@ -2568,13 +2571,19 @@ class iLGE_2D_Engine {
     }
 
     #draw() {
+        let vcamera = new iLGE_2D_GameObject(
+            null, null, iLGE_2D_GameObject_Type_Camera, this
+        );
+        vcamera.transform.size = new iLGE_2D_Vector2(this.width, this.height);
+        vcamera.prepareForCollision();
+
         this.canvas_context.setGlobalAlpha(1);
 
         let zOrderInfo = this.#getZOrderInfo(this.#objects);
         for (const objects of zOrderInfo) {
             if (!objects)
                 continue;
-            this.#draw_hud(objects.array);
+            this.#draw_hud(objects.array, vcamera);
         }
 
         this.canvas_context.setGlobalAlpha(1);
