@@ -383,6 +383,7 @@ class iLGE_2D_GameObject_Component_Sprite {
     id = "OBJID";
     visible = true;
     srcTransform = new iLGE_2D_Transform();
+    light = 1;
     opacity = 1;
 
     constructor(source_object, id, visible, srcX, srcY, srcWidth, srcHeight) {
@@ -420,6 +421,7 @@ class iLGE_2D_GameObject_Component_Rectangle {
     color = "#000000";
     id = "OBJID";
     visible = true;
+    light = 1;
     opacity = 1;
 
     constructor(color, id, visible) {
@@ -439,6 +441,7 @@ class iLGE_2D_GameObject_Component_Text {
     visible = true;
     styled_text = false;
     alignment = { vertical: "top", horizontal: "left" };
+    light = 1;
     opacity = 1;
 
     constructor(font_id, id, string, px, color, visible) {
@@ -459,6 +462,7 @@ class iLGE_2D_GameObject_Component_Camera_Viewer {
     pixel_filtering = false;
     pixel_filtering_level = 0;
     visible = true;
+    light = 1;
     opacity = 1;
 
     canvas_context = new iLGE_Canvas();
@@ -2034,6 +2038,7 @@ class iLGE_2D_Engine {
                             if (!component.visible)
                                 continue;
                             context.setGlobalAlpha(component.opacity);
+                            context.setGlobalLight(component.light);
 
                             switch (component.type) {
                                 case iLGE_2D_GameObject_Component_Type_Rectangle:
@@ -2435,6 +2440,7 @@ class iLGE_2D_Engine {
                         if (!component.visible)
                             continue;
                         context.setGlobalAlpha(component.opacity);
+                        context.setGlobalLight(component.light);
 
                         switch (component.type) {
                             case iLGE_2D_GameObject_Component_Type_Rectangle:

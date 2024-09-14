@@ -60,6 +60,7 @@ class iLGE_Canvas {
             uniform int uIsImage;
             uniform int uUseGrayscaleMultiplier;
             uniform float uAlpha;
+            uniform float uLight;
             uniform float uMultiplyFactor;
             uniform vec4 uTargetColor;
             varying vec2 vTexCoord;
@@ -84,7 +85,7 @@ class iLGE_Canvas {
                     color = uColor;
                 }
                 
-                gl_FragColor = vec4(color.rgb, color.a * uAlpha);
+                gl_FragColor = vec4(color.rgb * uLight, color.a * uAlpha);
             }
         `;
 
@@ -109,6 +110,7 @@ class iLGE_Canvas {
         this.samplerLocation = gl.getUniformLocation(this.program, 'uSampler');
         this.isImageLocation = gl.getUniformLocation(this.program, 'uIsImage');
         this.alphaLocation = gl.getUniformLocation(this.program, 'uAlpha');
+        this.lightLocation = gl.getUniformLocation(this.program, 'uLight');
 
         this.useGrayscaleMultiplierLocation = gl.getUniformLocation(this.program, 'uUseGrayscaleMultiplier');
         this.multiplyFactorLocation = gl.getUniformLocation(this.program, "uMultiplyFactor");
@@ -201,6 +203,7 @@ class iLGE_Canvas {
         gl.uniform4fv(this.targetColorLocation, new Float32Array(this.transforms.image.targetColor));
 
         gl.uniform1f(this.alphaLocation, this.transforms.globalAlpha);
+        gl.uniform1f(this.lightLocation, this.transforms.globalLight);
         gl.uniformMatrix4fv(
             this.projectionMatrixLocation,
             false,
@@ -425,6 +428,10 @@ class iLGE_Canvas {
         this.transforms.globalAlpha = alpha;
     }
 
+    setGlobalLight(light = 1.0) {
+        this.transforms.globalLight = light;
+    }
+
     setGlobalCompositeOperation(operation = "source-over") {
         /**
          * 
@@ -525,6 +532,7 @@ class iLGE_Canvas {
 
             strokeLineSize: 1.0,
             globalAlpha: 1.0,
+            globalLight: 1.0,
             cameraMatrix: [
                 1, 0, 0, 0,
                 0, 1, 0, 0,
