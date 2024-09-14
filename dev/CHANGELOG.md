@@ -1,5 +1,18 @@
 # 0.6.0
     the GameObject update
+    don't use Math.round for camera.transform.size
+    fix readme link
+    remove initialPosition in iLGE_2D_Transform class
+    fixed colliders rendering
+    changed iLGE-Canvas behavior
+    added applyTransformMatrix(matrix, isCamera) in iLGE_Canvas class
+    remove scale, translate and rotate hack
+    added outputTransform for position and size Normalized Vectors in iLGE_2D_GameObject class
+    added normalized collider transform support
+    minimal optimization
+    use multiplication instead mix color
+    do not draw objects off the screen
+    added globalLight
 
 # 0.5.3
     optimized zOrder and priority
