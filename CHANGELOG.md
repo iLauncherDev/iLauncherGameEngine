@@ -13,6 +13,7 @@
     use multiplication instead mix color
     do not draw objects off the screen
     added globalLight
+    added two stages update_function
 
 # 0.5.3
     optimized zOrder and priority

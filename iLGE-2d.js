@@ -3272,8 +3272,9 @@ class iLGE_2D_Engine {
             this.#requestAnimationFrame(this.start);
             return;
         }
+
         if (typeof this.update_function === "function") {
-            this.update_function(this);
+            this.update_function(this, false);
         }
 
         if (this.#isPaused)
@@ -3326,6 +3327,10 @@ class iLGE_2D_Engine {
             objects_with_collider_component,
             blocker_objects_with_collider_component
         );
+
+        if (typeof this.update_function === "function") {
+            this.update_function(this, true);
+        }
 
         this.#draw();
 
