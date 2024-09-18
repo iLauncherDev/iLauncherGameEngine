@@ -3153,9 +3153,9 @@ class iLGE_2D_Engine {
                             if (component.type === iLGE_2D_GameObject_Component_Type_Script) {
                                 component.object = object;
 
-                                if (typeof component.Start === "function" && component.Started) {
+                                if (typeof component.Start === "function" && !component.Started) {
                                     component.Start(this);
-                                    component.Started = false;
+                                    component.Started = true;
                                 }
 
                                 if (typeof component.Update === "function")
