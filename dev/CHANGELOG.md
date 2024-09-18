@@ -15,6 +15,7 @@
     added globalLight
     added two stages update_function
     fixed broken Start function
+    bug fix
 
 # 0.5.3
     optimized zOrder and priority
