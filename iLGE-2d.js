@@ -2397,7 +2397,7 @@ class iLGE_2D_Engine {
      * @param {iLGE_Canvas} canvas_context 
      */
     #setSpriteFlags(canvas_context, component) {
-        const context = this.canvas_context;
+        const context = canvas_context;
         const transforms = context.transforms;
 
         if (context.isCustomCanvas) {
