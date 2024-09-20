@@ -254,12 +254,10 @@ class iLGE_Canvas {
     }
 
     strokeRect(colorStr, x, y, width, height) {
-        const strokeLineSize = this.transforms.strokeLineSize || 1;
-
-        this.fillRect(colorStr, x, y, width, strokeLineSize);
-        this.fillRect(colorStr, x, y + height - strokeLineSize, width, strokeLineSize);
-        this.fillRect(colorStr, x, y, strokeLineSize, height);
-        this.fillRect(colorStr, x + width - strokeLineSize, y, strokeLineSize, height);
+        this.fillRect(colorStr, x, y, width, this.transforms.strokeLineSize.y);
+        this.fillRect(colorStr, x, y + height - this.transforms.strokeLineSize.y, width, this.transforms.strokeLineSize.y);
+        this.fillRect(colorStr, x, y, this.transforms.strokeLineSize.x, height);
+        this.fillRect(colorStr, x + width - this.transforms.strokeLineSize.x, y, this.transforms.strokeLineSize.x, height);
     }
 
     #updateTexture(image) {
@@ -469,8 +467,9 @@ class iLGE_Canvas {
         }
     }
 
-    setStrokeLineSize(strokeLineSize = 1.0) {
-        this.transforms.strokeLineSize = strokeLineSize;
+    setStrokeLineSize(x, y) {
+        this.transforms.strokeLineSize.x = x;
+        this.transforms.strokeLineSize.y = y;
     }
 
     close() {
@@ -530,7 +529,7 @@ class iLGE_Canvas {
                 targetColor: "#ffffff",
             },
 
-            strokeLineSize: 1.0,
+            strokeLineSize: { x: 1.0, y: 1.0 },
             globalAlpha: 1.0,
             globalLight: 1.0,
             cameraMatrix: [

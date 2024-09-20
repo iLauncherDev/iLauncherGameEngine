@@ -417,7 +417,7 @@ class iLGE_2D_GameObject_Component_Sprite_Transition_Effect {
 class iLGE_2D_GameObject_Component_Rectangle {
     type = iLGE_2D_GameObject_Component_Type_Rectangle;
     drawingMode = iLGE_2D_GameObject_Component_Rectangle_DrawingMode_Fill;
-    strokeLineSize = 1;
+    strokeLineSize = new iLGE_2D_Vector2(1, 1);
     color = "#000000";
     id = "OBJID";
     visible = true;
@@ -2042,7 +2042,7 @@ class iLGE_2D_Engine {
 
                             switch (component.type) {
                                 case iLGE_2D_GameObject_Component_Type_Rectangle:
-                                    context.setStrokeLineSize(component.strokeLineSize);
+                                    context.setStrokeLineSize(component.strokeLineSize.x, component.strokeLineSize.y);
 
                                     switch (component.drawingMode) {
                                         case iLGE_2D_GameObject_Component_Rectangle_DrawingMode_Fill:
@@ -2444,7 +2444,7 @@ class iLGE_2D_Engine {
 
                         switch (component.type) {
                             case iLGE_2D_GameObject_Component_Type_Rectangle:
-                                context.setStrokeLineSize(component.strokeLineSize);
+                                context.setStrokeLineSize(component.strokeLineSize.x, component.strokeLineSize.y);
 
                                 switch (component.drawingMode) {
                                     case iLGE_2D_GameObject_Component_Rectangle_DrawingMode_Fill:
